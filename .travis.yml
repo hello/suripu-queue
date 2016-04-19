@@ -7,6 +7,8 @@ env:
   global:
   - APP_NAME=suripu-queue
   - BUILD_NUMBER=0.8.$TRAVIS_BUILD_NUMBER
+  - secure: IO2vXu7uyzMKkNu3KY+MBZBGx8zCtAZHOA1quMurmq4cVNzPka9L27Kz3Dk0bZ+RUAi0oBxs/spn4Nxq+Z/CY5slK6ntLy+ogVuY8zNRxZVhWP+bauXCrPD5yzeTMJfr2qd170IGyfLxBvgDGfc91KnDC2YQNrCKuMuvhkTUsnWGOdFBwYanfVkfuGeAlyzc6jQanO9d00KgFq6YZHXwrsMLjeHY8Yb3SBolEiOMXqKjOdvY7p5fbris/9BhFYpbTqtR794ai7c3XuDhlv1tsG+8YHPJKwj4mBiinQoUciwcvpmlDLa1AShxveOUrWzNpiwQtLeHt4YREkvGhKi6QlBTPeCf00mXhpnZ279fYwNTrNLQqZOp2BPTmHEm4pE5DVvKWvHu6GdRMjWKTlBQ4AYMFmhMQ+6wYNoWQBUlLX2NF7WnMkonyuw7jOoIjchmIn1M6w6gOFpsSFOeK+um7Ncjg+pnxI4LP2k16ncudPGwuI6XZa7CE+9nZwN1f3fF6zM7qqWO+8jaLFIpiOoQIsIqZ4Qirafy071l8bQc88G480Ok/FqH6+09WWmWWdUYhroYjeLfZ5V4t4ptAxspbC8yLEDv8/nCJkvtn15imo7pwpBIEgnDlyMpSw/2sN8E6rIjxOnrjqYDPfmp7gSgfj3jZpxErf8fNL3YabFZ0to=
+  - secure: szZFGxtgb8+1Hn3lXpL5e3aGinoqYikjfnjpA1dsKsLY/jtlorvvyt184QwZMjXAQkWmiKTXBFq7i8H4dUvLI3xZPnc9ohrIo9lbR1fVmKRBFKk9rGoYQ5f5qBErhCrz5yjR+HTr7D6XM4xvXPh6PK2waPz9xQht2OUQe1ZhNu/KZPkjDXGNYc/NEWL70VSoLrkBOerB1K8zQ7XzPGK8+9w5p+2HFpYO8EEKj1GI6dhvlIcm10dpf8+QQNQ1KolNMv4UqkLsTEKtVA5R6IU3P+EJvZZSyHR5Nm9vswRnfoR+ut/mKIPeBz+FFWGTjo3LOS+0tA4altKbrK/gLpzGKKMoYy4+xvpo0PLVv7bXVlty5fK1fvEm5C/DglCq3rEowb/RtVQo6luu0o4VtqHjvwDXLpgTqtXYYick57VDZ5EvumWGOsBFSbriWT+1lnxeZxkMLuzfyvH+K7PLePFVy+co6pk1NWPhegKRiw2YIbpN13av24QsYJDbuMorO6wHQnU/CosYy02PZ4oIBM+RzSUh7/UpjzgZTbnL4wv+U/f+sE9jBTm82Wa3JGVMDXxjjSM0SVXnh3oIr0uXv+BFHUwqWprKZjkeC8uuKCMKAmdqxMCKEZ5rgf0/KH4jkrNUt9AnDqVR7oaBx5poLpbwT6D1a+IPmQ7lqAVF3IvuaAA=
 script:
 - echo "MAVEN_OPTS='-Xmx2g -XX:MaxPermSize=512m'" > ~/.mavenrc
 - export TEMP_DIR="/tmp/$APP_NAME"
@@ -26,7 +28,8 @@ before_deploy:
 - mvn --settings settings.xml -DskipITs deploy
 - gem install fpm
 - cp target/$APP_NAME-$BUILD_NUMBER.jar $TEMP_DIR/opt/hello/$APP_NAME.jar
-- fpm --force -s dir -C $TEMP_DIR -t deb --name "$APP_NAME" --version $BUILD_NUMBER --config-files etc/hello .
+- fpm --force -s dir -C $TEMP_DIR -t deb --name "$APP_NAME" --version $BUILD_NUMBER
+  --config-files etc/hello .
 - cp ${APP_NAME}_${BUILD_NUMBER}_amd64.deb configs/
 after_deploy:
 - git config --global user.email "builds@travis-ci.com"
