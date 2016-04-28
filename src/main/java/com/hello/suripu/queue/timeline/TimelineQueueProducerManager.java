@@ -4,6 +4,8 @@ import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.amazonaws.services.sqs.model.BatchResultErrorEntry;
 import com.amazonaws.services.sqs.model.SendMessageBatchRequestEntry;
 import com.amazonaws.services.sqs.model.SendMessageBatchResult;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -13,9 +15,7 @@ import com.hello.suripu.api.queue.TimelineQueueProtos;
 import com.hello.suripu.core.util.DateTimeUtil;
 import com.hello.suripu.queue.models.AccountData;
 import com.hello.suripu.queue.models.SenseDataDAO;
-import com.yammer.dropwizard.lifecycle.Managed;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Meter;
+import io.dropwizard.lifecycle.Managed;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
@@ -85,7 +85,8 @@ public class TimelineQueueProducerManager implements Managed {
                                         final ScheduledExecutorService producerExecutor,
                                         final ExecutorService sendMessageExecutor,
                                         final long scheduleIntervalMinutes,
-                                        final int numProducerThreads) {
+                                        final int numProducerThreads,
+                                        final MetricRegistry metrics) {
         this.sqsClient = sqsClient;
         this.senseDataDAO = senseDataDAO;
         this.sqsQueueUrl = sqsQueueUrl;
@@ -105,11 +106,12 @@ public class TimelineQueueProducerManager implements Managed {
         this.GMTHourToTimeZoneMap = ImmutableMap.copyOf(tempMap);
 
         // metrics
-        this.messagesCreated = Metrics.defaultRegistry().newMeter(TimelineQueueProducerManager.class, "created", "messages-created", TimeUnit.SECONDS);
-        this.messagesSent = Metrics.defaultRegistry().newMeter(TimelineQueueProducerManager.class, "sent", "messages-sent", TimeUnit.SECONDS);
-        this.sentSuccess = Metrics.defaultRegistry().newMeter(TimelineQueueProducerManager.class, "success", "messages-sent-success", TimeUnit.SECONDS);
-        this.sentFailures = Metrics.defaultRegistry().newMeter(TimelineQueueProducerManager.class, "fail", "messages-sent-fail", TimeUnit.SECONDS);
-        this.accountsProcessed = Metrics.defaultRegistry().newMeter(TimelineQueueProducerManager.class, "accounts", "accounts-processed", TimeUnit.SECONDS);
+        final Class klass = TimelineQueueProducerManager.class;
+        this.messagesCreated =  metrics.meter(MetricRegistry.name(klass, "created", "messages-created"));
+        this.messagesSent =  metrics.meter(MetricRegistry.name(klass, "sent", "messages-sent"));
+        this.sentSuccess = metrics.meter(MetricRegistry.name(klass, "success", "messages-sent-success"));
+        this.sentFailures =  metrics.meter(MetricRegistry.name(klass, "fail", "messages-sent-fail"));
+        this.accountsProcessed =  metrics.meter(MetricRegistry.name(klass, "accounts", "accounts-processed"));
     }
 
 
@@ -181,6 +183,8 @@ public class TimelineQueueProducerManager implements Managed {
 
         // get list of users with sense-data in the last 24 hours for a timezone
         final Map<Long, String> accountIds = getCurrentTimezoneAccountIds(now, offsetMillisList);
+        this.accountsProcessed.mark(accountIds.size());
+
 
         // process account-ids
         final List<SendMessageBatchRequestEntry> messages  = Lists.newArrayList();
@@ -297,7 +301,6 @@ public class TimelineQueueProducerManager implements Managed {
                     now.getHourOfDay(), offsetMillisList, validAccounts.size());
         }
 
-        this.accountsProcessed.mark(accountIdDateMap.size());
         return accountIdDateMap;
     }
 

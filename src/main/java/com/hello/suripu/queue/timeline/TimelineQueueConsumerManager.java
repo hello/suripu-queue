@@ -1,19 +1,18 @@
 package com.hello.suripu.queue.timeline;
 
 import com.amazonaws.services.sqs.model.DeleteMessageBatchRequestEntry;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.hello.suripu.core.processors.TimelineProcessor;
-import com.yammer.dropwizard.lifecycle.Managed;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Meter;
+import io.dropwizard.lifecycle.Managed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by ksg on 3/15/16
@@ -48,19 +47,22 @@ public class TimelineQueueConsumerManager implements Managed {
     public TimelineQueueConsumerManager(final TimelineQueueProcessor queueProcessor,
                                         final TimelineProcessor timelineProcessor,
                                         final ExecutorService consumerExecutor,
-                                        final ExecutorService timelineExecutors) {
+                                        final ExecutorService timelineExecutors,
+                                        final MetricRegistry metrics
+                                        ) {
         this.queueProcessor = queueProcessor;
         this.timelineProcessor = timelineProcessor;
         this.timelineExecutor = timelineExecutors;
         this.consumerExecutor = consumerExecutor;
 
         // metrics
-        this.messagesProcessed = Metrics.defaultRegistry().newMeter(TimelineQueueConsumerManager.class, "processed", "messages-processed", TimeUnit.SECONDS);
-        this.messagesReceived = Metrics.defaultRegistry().newMeter(TimelineQueueConsumerManager.class, "received", "messages-received", TimeUnit.SECONDS);
-        this.messagesDeleted = Metrics.defaultRegistry().newMeter(TimelineQueueConsumerManager.class, "deleted", "messages-deleted", TimeUnit.SECONDS);
-        this.validSleepScore = Metrics.defaultRegistry().newMeter(TimelineQueueConsumerManager.class, "ok-sleep-score", "valid-score", TimeUnit.SECONDS);
-        this.invalidSleepScore = Metrics.defaultRegistry().newMeter(TimelineQueueConsumerManager.class, "invalid-sleep-score", "invalid-score", TimeUnit.SECONDS);
-        this.noTimeline = Metrics.defaultRegistry().newMeter(TimelineQueueConsumerManager.class, "timeline-fail", "fail-to-created", TimeUnit.SECONDS);
+        final Class klass = TimelineQueueConsumerManager.class;
+        this.messagesProcessed = metrics.meter(MetricRegistry.name(klass, "processed", "messages-processed"));
+        this.messagesReceived = metrics.meter(MetricRegistry.name(klass, "received", "messages-received"));
+        this.messagesDeleted = metrics.meter(MetricRegistry.name(klass, "deleted", "messages-deleted"));
+        this.validSleepScore = metrics.meter(MetricRegistry.name(klass, "ok-sleep-score", "valid-score"));
+        this.invalidSleepScore = metrics.meter(MetricRegistry.name(klass, "invalid-sleep-score", "invalid-score"));
+        this.noTimeline = metrics.meter(MetricRegistry.name(klass, "timeline-fail", "fail-to-created"));
 
     }
 

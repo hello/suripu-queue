@@ -38,10 +38,10 @@ common_db:
   checkConnectionWhileIdle: false
 
   # how long a connection must be held before it can be validated
-  checkConnectionHealthWhenIdleFor: 10s
+  evictionInterval: 10s
 
   # the maximum lifetime of an idle connection
-  closeConnectionIfIdleFor: 1 minute
+  minIdleTime: 1 minute
 
 sensors_db:
   driverClass: org.postgresql.Driver
@@ -72,20 +72,28 @@ sensors_db:
   checkConnectionWhileIdle: false
 
   # how long a connection must be held before it can be validated
-  checkConnectionHealthWhenIdleFor: 10s
+  evictionInterval: 10s
 
   # the maximum lifetime of an idle connection
-  closeConnectionIfIdleFor: 1 minute
-http:
-  # The port on which the HTTP server listens for service requests.
-  # Because Java cannot drop privileges in a POSIX system, these
-  # ports cannot be in the range 1-1024. A port value of 0 will
-  # make the OS use an arbitrary unused port.
-  port: 9999
+  minIdleTime: 1 minute
 
-  # The port on which the HTTP server listens for administrative
-  # requests. Subject to the same limitations as "port".
-  adminPort: 9998
+server:
+  adminMinThreads: 1
+  adminMaxThreads: 10
+  adminContextPath: /
+  applicationContextPath: /
+  applicationConnectors:
+    - type: http
+      port: 9999
+      idleTimeout: 25 seconds
+  adminConnectors:
+    - type: http
+      port: 9998
+      idleTimeout: 25 seconds
+  requestLog:
+    timeZone: UTC
+    appenders:
+      - type: console
 
 # Logging settings.
 logging:

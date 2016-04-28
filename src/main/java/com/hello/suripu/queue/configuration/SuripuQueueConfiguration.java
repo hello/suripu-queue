@@ -1,19 +1,19 @@
 package com.hello.suripu.queue.configuration;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.hello.suripu.coredw.configuration.GraphiteConfiguration;
-import com.hello.suripu.coredw.configuration.NewDynamoDBConfiguration;
-import com.hello.suripu.coredw.configuration.S3BucketConfiguration;
-import com.hello.suripu.coredw.configuration.TaimurainHttpClientConfiguration;
-import com.yammer.dropwizard.config.Configuration;
-import com.yammer.dropwizard.db.DatabaseConfiguration;
+import com.hello.suripu.coredw8.configuration.GraphiteConfiguration;
+import com.hello.suripu.coredw8.configuration.NewDynamoDBConfiguration;
+import com.hello.suripu.coredw8.configuration.S3BucketConfiguration;
+import com.hello.suripu.coredw8.configuration.TaimurainHttpClientConfiguration;
+import io.dropwizard.Configuration;
+import io.dropwizard.db.DataSourceFactory;
 
 import javax.validation.Valid;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 
-public class SuripuQueueConfiguration extends Configuration {
+public class SuripuQueueConfiguration extends Configuration{
 
     public SuripuQueueConfiguration() {
     }
@@ -21,14 +21,14 @@ public class SuripuQueueConfiguration extends Configuration {
     @Valid
     @NotNull
     @JsonProperty("common_db")
-    private DatabaseConfiguration commonDB = new DatabaseConfiguration();
-    public DatabaseConfiguration getCommonDB() { return commonDB; }
+    private DataSourceFactory commonDB = new DataSourceFactory();
+    public DataSourceFactory getCommonDB() { return commonDB; }
 
     @Valid
     @NotNull
     @JsonProperty("sensors_db")
-    private DatabaseConfiguration sensorDB = new DatabaseConfiguration();
-    public DatabaseConfiguration getSensorDB() {
+    private DataSourceFactory sensorDB = new DataSourceFactory();
+    public DataSourceFactory getSensorDB() {
         return sensorDB;
     }
 
@@ -124,7 +124,5 @@ public class SuripuQueueConfiguration extends Configuration {
     @JsonProperty("taimurain_http_client")
     private TaimurainHttpClientConfiguration taimurainHttpClientConfiguration;
     public TaimurainHttpClientConfiguration getTaimurainHttpClientConfiguration() { return taimurainHttpClientConfiguration; }
-
-
 
 }
