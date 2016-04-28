@@ -1,0 +1,4 @@
+/configs/*.dev.yml
+suripu-queue.iml
+.idea
+/target/
