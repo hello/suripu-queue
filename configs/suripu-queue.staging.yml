@@ -118,18 +118,17 @@ logging:
     com.hello.suripu.coredw: WARN
     com.hello.suripu.algorithm: WARN
 
-  file:
-    enabled: true
-    threshold: DEBUG
-    currentLogFilename: /var/log/suripu-queue/suripu-queue.log
-    # When the log file rotates, the archived log will be renamed to this and gzipped. The
-    # %d is replaced with the previous day (yyyy-MM-dd). Custom rolling windows can be created
-    # by passing a SimpleDateFormat-compatible format as an argument: "%d{yyyy-MM-dd-hh}".
-    archivedLogFilenamePattern: /var/log/suripu-queue/suripu-queue-%d{yyyy-MM-dd}.log.gz
-    # The number of archived files to keep.
-    archivedFileCount: 7
-    # The timezone used to format dates. HINT: USE THE DEFAULT, UTC.
-    timeZone: UTC
+#  appenders:
+#      - type: file
+#        threshold: DEBUG
+#        currentLogFilename: /var/log/suripu-queue/suripu-queue.log
+#        archivedLogFilenamePattern: /var/log/suripu-queue/suripu-queue-%d{yyyy-MM-dd}.log.gz
+#        archivedFileCount: 7
+#      - type: papertrail
+#        host: logs2.papertrailapp.com
+#        port: 11366
+#        ident: suripu-queue-dev
+
 
 sleep_stats_version: v_0_2
 

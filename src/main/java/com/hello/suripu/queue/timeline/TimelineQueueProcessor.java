@@ -141,6 +141,7 @@ public class TimelineQueueProcessor {
             final List<String> queueUrls = sqs.listQueues().getQueueUrls();
 
             for (final String url : queueUrls) {
+                LOGGER.debug("queue: {}", url);
                 if (url.contains(queueName)) {
                     LOGGER.debug("action=found-sqs-url value={}", url);
                     return Optional.of(url);

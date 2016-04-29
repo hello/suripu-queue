@@ -62,6 +62,7 @@ import com.hello.suripu.queue.timeline.TimelineQueueProducerManager;
 import io.dropwizard.Application;
 import io.dropwizard.client.HttpClientBuilder;
 import io.dropwizard.jdbi.DBIFactory;
+import io.dropwizard.jdbi.bundles.DBIExceptionsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import io.dropwizard.util.Duration;
@@ -78,8 +79,6 @@ import java.util.concurrent.TimeUnit;
 public class SuripuQueue extends Application<SuripuQueueConfiguration> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SuripuQueue.class);
 
-    private static int MIN_THREAD_SIZE = 2;
-
     public static void main(final String[] args) throws Exception {
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
         new SuripuQueue().run(args);
@@ -87,6 +86,7 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
 
     @Override
     public void initialize(Bootstrap<SuripuQueueConfiguration> bootstrap) {
+        bootstrap.addBundle(new DBIExceptionsBundle());
         bootstrap.addCommand(new TimelineQueueWorkerCommand());
         bootstrap.addCommand(new PopulateTimelineQueueCommand());
     }
@@ -253,14 +253,15 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
         final TimelineQueueProcessor queueProcessor = new TimelineQueueProcessor(sqsQueueUrl, sqsClient, configuration.getSqsConfiguration());
 
         // thread pool to run consumer
+        final int minThreadSize = 2;
         final ExecutorService consumerExecutor = environment.lifecycle().executorService("consumer")
-                .minThreads(MIN_THREAD_SIZE)
+                .minThreads(minThreadSize)
                 .maxThreads(configuration.getNumConsumerThreads())
                 .keepAliveTime(Duration.seconds(keepAliveTimeSeconds)).build();
 
         // thread pool to compute timelines
         final ExecutorService timelineExecutor = environment.lifecycle().executorService("consumer_timeline_processor")
-                .minThreads(MIN_THREAD_SIZE)
+                .minThreads(minThreadSize)
                 .maxThreads(configuration.getNumTimelineThreads())
                 .keepAliveTime(Duration.seconds(keepAliveTimeSeconds)).build();
 
@@ -274,7 +275,7 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
 
         // Thread pool to send batch messages in parallel
         final ExecutorService sendMessageExecutor = environment.lifecycle().executorService("producer_send_message")
-                .minThreads(MIN_THREAD_SIZE)
+                .minThreads(minThreadSize)
                 .maxThreads(configuration.getNumSendMessageThreads())
                 .keepAliveTime(Duration.seconds(keepAliveTimeSeconds)).build();
 
