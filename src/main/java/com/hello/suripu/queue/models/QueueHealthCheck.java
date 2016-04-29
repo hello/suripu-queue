@@ -2,19 +2,18 @@ package com.hello.suripu.queue.models;
 
 import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.amazonaws.services.sqs.model.ListQueuesResult;
-import com.yammer.metrics.core.HealthCheck;
+import com.codahale.metrics.health.HealthCheck;
 
 /**
  * Created by ksg on 3/15/16
  */
 
-public class QueueHealthCheck extends HealthCheck{
+public class QueueHealthCheck extends HealthCheck {
     private String name;
     private final AmazonSQSAsync sqsClient;
     private final String queueURL;
 
     public QueueHealthCheck(final String name, final AmazonSQSAsync sqsClient, final String queueURL) {
-        super("health-check");
         this.name = name;
         this.sqsClient = sqsClient;
         this.queueURL = queueURL;

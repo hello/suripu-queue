@@ -21,9 +21,8 @@ import com.hello.suripu.queue.configuration.SQSConfiguration;
 import com.hello.suripu.queue.configuration.SuripuQueueConfiguration;
 import com.hello.suripu.queue.timeline.TimelineQueueProcessor;
 import com.opencsv.CSVReader;
-import com.yammer.dropwizard.Service;
-import com.yammer.dropwizard.cli.EnvironmentCommand;
-import com.yammer.dropwizard.config.Environment;
+import io.dropwizard.cli.ConfiguredCommand;
+import io.dropwizard.setup.Bootstrap;
 import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
 import org.joda.time.DateTime;
@@ -48,7 +47,7 @@ import java.util.concurrent.Future;
 /**
  * Created by kingshy on 2/18/16
  */
-public class PopulateTimelineQueueCommand extends EnvironmentCommand<SuripuQueueConfiguration> {
+public class PopulateTimelineQueueCommand extends ConfiguredCommand<SuripuQueueConfiguration> {
     private static final Logger LOGGER = LoggerFactory.getLogger(PopulateTimelineQueueCommand.class);
     private final ExecutorService executor = Executors.newFixedThreadPool(12);
 
@@ -65,8 +64,8 @@ public class PopulateTimelineQueueCommand extends EnvironmentCommand<SuripuQueue
     }
 
 
-    public PopulateTimelineQueueCommand(Service<SuripuQueueConfiguration> service, String name, String description) {
-        super(service, name, description);
+    public PopulateTimelineQueueCommand() {
+        super("write_batch_messages", "insert queue message to generate timelines");
     }
 
     @Override
@@ -85,7 +84,7 @@ public class PopulateTimelineQueueCommand extends EnvironmentCommand<SuripuQueue
     }
 
     @Override
-    protected void run(Environment environment, Namespace namespace, SuripuQueueConfiguration configuration) throws Exception {
+    protected void run(Bootstrap<SuripuQueueConfiguration> bootstrap, Namespace namespace, SuripuQueueConfiguration configuration) throws Exception {
         // read file csv file of accountIds, min Date string
         final File accountsFile = new File(namespace.getString("csv"));
         final Map<Long, DateTime> accountIds = readDataFile(accountsFile);

@@ -12,7 +12,11 @@ import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.amazonaws.services.sqs.AmazonSQSAsyncClient;
 import com.amazonaws.services.sqs.buffered.AmazonSQSBufferedAsyncClient;
 import com.amazonaws.services.sqs.model.DeleteMessageBatchRequestEntry;
-import com.google.common.base.Joiner;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricFilter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.graphite.Graphite;
+import com.codahale.metrics.graphite.GraphiteReporter;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -42,47 +46,45 @@ import com.hello.suripu.core.db.colors.SenseColorDAOSQLImpl;
 import com.hello.suripu.core.db.util.JodaArgumentFactory;
 import com.hello.suripu.core.db.util.PostgresIntegerArrayArgumentFactory;
 import com.hello.suripu.core.processors.TimelineProcessor;
-import com.hello.suripu.coredw.clients.AmazonDynamoDBClientFactory;
-import com.hello.suripu.coredw.clients.TaimurainHttpClient;
-import com.hello.suripu.coredw.configuration.S3BucketConfiguration;
-import com.hello.suripu.coredw.configuration.TaimurainHttpClientConfiguration;
-import com.hello.suripu.coredw.db.SleepHmmDAODynamoDB;
-import com.hello.suripu.coredw.metrics.RegexMetricPredicate;
+import com.hello.suripu.coredw8.clients.AmazonDynamoDBClientFactory;
+import com.hello.suripu.coredw8.clients.TaimurainHttpClient;
+import com.hello.suripu.coredw8.configuration.S3BucketConfiguration;
+import com.hello.suripu.coredw8.configuration.TaimurainHttpClientConfiguration;
+import com.hello.suripu.coredw8.db.SleepHmmDAODynamoDB;
 import com.hello.suripu.queue.configuration.SQSConfiguration;
 import com.hello.suripu.queue.configuration.SuripuQueueConfiguration;
 import com.hello.suripu.queue.modules.RolloutQueueModule;
 import com.hello.suripu.queue.timeline.TimelineGenerator;
 import com.hello.suripu.queue.timeline.TimelineQueueProcessor;
-import com.yammer.dropwizard.Service;
-import com.yammer.dropwizard.cli.EnvironmentCommand;
-import com.yammer.dropwizard.client.HttpClientBuilder;
-import com.yammer.dropwizard.config.Environment;
-import com.yammer.dropwizard.db.ManagedDataSourceFactory;
-import com.yammer.dropwizard.jdbi.ImmutableListContainerFactory;
-import com.yammer.dropwizard.jdbi.ImmutableSetContainerFactory;
-import com.yammer.dropwizard.jdbi.OptionalContainerFactory;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Meter;
-import com.yammer.metrics.reporting.GraphiteReporter;
+import io.dropwizard.cli.ConfiguredCommand;
+import io.dropwizard.client.HttpClientBuilder;
+import io.dropwizard.jdbi.DBIFactory;
+import io.dropwizard.jdbi.ImmutableListContainerFactory;
+import io.dropwizard.jdbi.ImmutableSetContainerFactory;
+import io.dropwizard.jdbi.OptionalContainerFactory;
+import io.dropwizard.setup.Bootstrap;
+import io.dropwizard.setup.Environment;
+import io.dropwizard.util.Duration;
 import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
 import org.skife.jdbi.v2.DBI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 // docs: http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/Welcome.html
-public class TimelineQueueWorkerCommand extends EnvironmentCommand<SuripuQueueConfiguration> {
+public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueConfiguration> {
     private static final Logger LOGGER = LoggerFactory.getLogger(TimelineQueueWorkerCommand.class);
     private Boolean isRunning = false;
     private ExecutorService executor;
 
-    public TimelineQueueWorkerCommand(Service<SuripuQueueConfiguration> service, String name, String description) {
-        super(service, name, description);
+    public TimelineQueueWorkerCommand() {
+        super("timeline_generator", "generate timeline");
     }
 
     @Override
@@ -107,8 +109,7 @@ public class TimelineQueueWorkerCommand extends EnvironmentCommand<SuripuQueueCo
     }
 
     @Override
-    protected void run(Environment environment, Namespace namespace, SuripuQueueConfiguration configuration) throws Exception {
-
+    protected void run(Bootstrap<SuripuQueueConfiguration> bootstrap, Namespace namespace, SuripuQueueConfiguration configuration) throws Exception{
         final String task = namespace.getString("task");
 
         // setup SQS connection
@@ -131,6 +132,12 @@ public class TimelineQueueWorkerCommand extends EnvironmentCommand<SuripuQueueCo
         final String sqsQueueUrl = optionalSqsQueueUrl.get();
 
         final TimelineQueueProcessor queueProcessor = new TimelineQueueProcessor(sqsQueueUrl, sqs, sqsConfiguration);
+        final Environment environment = new Environment(bootstrap.getApplication().getName(),
+                bootstrap.getObjectMapper(),
+                bootstrap.getValidatorFactory().getValidator(),
+                bootstrap.getMetricRegistry(),
+                bootstrap.getClassLoader());
+
 
         if (task.equalsIgnoreCase("send")) {
             // producer -- debugging, create 10 messages for testing
@@ -150,9 +157,13 @@ public class TimelineQueueWorkerCommand extends EnvironmentCommand<SuripuQueueCo
         } else {
             // consumer
             final int numConsumerThreads = configuration.getNumConsumerThreads();
-            executor = environment.managedExecutorService("timeline_queue", numConsumerThreads, numConsumerThreads, 2, TimeUnit.SECONDS);
+            executor = environment.lifecycle().executorService("timeline_queue")
+                    .minThreads(numConsumerThreads)
+                    .maxThreads(numConsumerThreads)
+                    .keepAliveTime(Duration.minutes(2L))
+                    .build();
             isRunning = true;
-            processMessages(queueProcessor, provider, configuration);
+            processMessages(environment, queueProcessor, provider, configuration);
         }
     }
 
@@ -165,7 +176,8 @@ public class TimelineQueueWorkerCommand extends EnvironmentCommand<SuripuQueueCo
      * @throws Exception
      */
 
-    private void processMessages(final TimelineQueueProcessor queueProcessor,
+    private void processMessages(final Environment environment,
+                                 final TimelineQueueProcessor queueProcessor,
                                  final AWSCredentialsProvider provider,
                                  final SuripuQueueConfiguration configuration) throws Exception {
         // setup rollout module
@@ -186,25 +198,31 @@ public class TimelineQueueWorkerCommand extends EnvironmentCommand<SuripuQueueCo
             final String env = (configuration.getDebug()) ? "dev" : "prod";
             final String prefix = String.format("%s.%s.suripu-queue", apiKey, env);
 
-            final List<String> metrics = configuration.getGraphite().getIncludeMetrics();
-            final RegexMetricPredicate predicate = new RegexMetricPredicate(metrics);
-            final Joiner joiner = Joiner.on(", ");
-            LOGGER.info("Logging the following metrics: {}", joiner.join(metrics));
-            GraphiteReporter.enable(Metrics.defaultRegistry(), interval, TimeUnit.SECONDS, graphiteHostName, 2003, prefix, predicate);
+            final Graphite graphite = new Graphite(new InetSocketAddress(graphiteHostName, 2003));
+            final GraphiteReporter reporter = GraphiteReporter.forRegistry(environment.metrics())
+                    .prefixedWith(prefix)
+                    .convertRatesTo(TimeUnit.SECONDS)
+                    .convertDurationsTo(TimeUnit.MILLISECONDS)
+                    .filter(MetricFilter.ALL)
+                    .build(graphite);
+            reporter.start(interval, TimeUnit.SECONDS);
 
             LOGGER.info("Metrics enabled.");
         } else {
             LOGGER.warn("Metrics not enabled.");
         }
 
-        final Meter messagesProcessed = Metrics.defaultRegistry().newMeter(TimelineQueueWorkerCommand.class, "processed", "messages-processed", TimeUnit.SECONDS);
-        final Meter messagesReceived = Metrics.defaultRegistry().newMeter(TimelineQueueWorkerCommand.class, "received", "messages-received", TimeUnit.SECONDS);
-        final Meter messagesDeleted = Metrics.defaultRegistry().newMeter(TimelineQueueWorkerCommand.class, "deleted", "messages-deleted", TimeUnit.SECONDS);
-        final Meter validSleepScore = Metrics.defaultRegistry().newMeter(TimelineQueueWorkerCommand.class, "ok-sleep-score", "valid-score", TimeUnit.SECONDS);
-        final Meter invalidSleepScore = Metrics.defaultRegistry().newMeter(TimelineQueueWorkerCommand.class, "invalid-sleep-score", "invalid-score", TimeUnit.SECONDS);
-        final Meter noTimeline = Metrics.defaultRegistry().newMeter(TimelineQueueWorkerCommand.class, "timeline-fail", "fail-to-created", TimeUnit.SECONDS);
+        final MetricRegistry metrics = environment.metrics();
 
-        final TimelineProcessor timelineProcessor = createTimelineProcessor(provider, configuration);
+        final Class klass = TimelineQueueWorkerCommand.class;
+        final Meter messagesProcessed = metrics.meter(MetricRegistry.name(klass, "processed", "messages-processed"));
+        final Meter messagesReceived = metrics.meter(MetricRegistry.name(klass, "received", "messages-received"));
+        final Meter messagesDeleted = metrics.meter(MetricRegistry.name(klass, "deleted", "messages-deleted"));
+        final Meter validSleepScore = metrics.meter(MetricRegistry.name(klass, "ok-sleep-score", "valid-score"));
+        final Meter invalidSleepScore = metrics.meter(MetricRegistry.name(klass, "invalid-sleep-score", "invalid-score"));
+        final Meter noTimeline = metrics.meter(MetricRegistry.name(klass, "timeline-fail", "fail-to-created"));
+
+        final TimelineProcessor timelineProcessor = createTimelineProcessor(environment, provider, configuration);
         int numEmptyQueueIterations = 0;
 
         do {
@@ -255,11 +273,12 @@ public class TimelineQueueWorkerCommand extends EnvironmentCommand<SuripuQueueCo
         } while (isRunning);
     }
 
-    private TimelineProcessor createTimelineProcessor(final AWSCredentialsProvider provider,
+    private TimelineProcessor createTimelineProcessor(final Environment environment,
+                                                      final AWSCredentialsProvider provider,
                                                       final SuripuQueueConfiguration config)throws Exception {
 
-        final ManagedDataSourceFactory managedDataSourceFactory = new ManagedDataSourceFactory();
-        final DBI commonDB = new DBI(managedDataSourceFactory.build(config.getCommonDB()));
+        final DBIFactory factory = new DBIFactory();
+        final DBI commonDB = factory.build(environment, config.getCommonDB(), "commonDB");
 
         commonDB.registerArgumentFactory(new JodaArgumentFactory());
         commonDB.registerContainerFactory(new OptionalContainerFactory());
@@ -331,8 +350,11 @@ public class TimelineQueueWorkerCommand extends EnvironmentCommand<SuripuQueueCo
         final TaimurainHttpClientConfiguration taimurainHttpClientConfiguration = config.getTaimurainHttpClientConfiguration();
 
         final TaimurainHttpClient taimurainHttpClient = TaimurainHttpClient.create(
-                new HttpClientBuilder().using(taimurainHttpClientConfiguration.getHttpClientConfiguration()).build(),
+                new HttpClientBuilder(environment)
+                        .using(taimurainHttpClientConfiguration.getHttpClientConfiguration())
+                        .build("taimurain"),
                 taimurainHttpClientConfiguration.getEndpoint());
+
 
         return TimelineProcessor.createTimelineProcessor(
                 pillDataDAODynamoDB,

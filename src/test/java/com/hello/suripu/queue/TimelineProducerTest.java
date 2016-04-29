@@ -1,6 +1,7 @@
 package com.hello.suripu.queue;
 
 import com.amazonaws.services.sqs.AmazonSQSAsync;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.hello.suripu.queue.models.AccountData;
@@ -36,6 +37,8 @@ public class TimelineProducerTest {
         final AmazonSQSAsync sqsClient = mock(AmazonSQSAsync.class);
         final String queueUrl = "testing";
         final ExecutorService executor = mock(ExecutorService.class);
+        final MetricRegistry metrics = mock(MetricRegistry.class);
+
         final ScheduledExecutorService producerExecutor = mock(ScheduledExecutorService.class);
         final int numProducerThreads = 1;
 
@@ -46,7 +49,8 @@ public class TimelineProducerTest {
                 producerExecutor,
                 executor,
                 5,
-                numProducerThreads);
+                numProducerThreads,
+                metrics);
     }
 
     @After

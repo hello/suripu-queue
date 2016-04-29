@@ -28,6 +28,8 @@ common_db:
   # the SQL query to run when validating a connection's liveness
   validationQuery: "/* MyService Health Check */ SELECT 1"
 
+  initialSize: 2
+
   # the minimum number of connections to keep open
   minSize: 2
 
@@ -38,10 +40,10 @@ common_db:
   checkConnectionWhileIdle: false
 
   # how long a connection must be held before it can be validated
-  checkConnectionHealthWhenIdleFor: 10s
+  evictionInterval: 10s
 
   # the maximum lifetime of an idle connection
-  closeConnectionIfIdleFor: 1 minute
+  minIdleTime: 1 minute
 
 sensors_db:
   driverClass: org.postgresql.Driver
@@ -62,57 +64,54 @@ sensors_db:
   # the SQL query to run when validating a connection's liveness
   validationQuery: "/* MyService Health Check */ SELECT 1"
 
+  initialSize: 2
+
   # the minimum number of connections to keep open
   minSize: 2
 
   # the maximum number of connections to keep open
-  maxSize: 24
+  maxSize: 8
 
   # whether or not idle connections should be validated
   checkConnectionWhileIdle: false
 
   # how long a connection must be held before it can be validated
-  checkConnectionHealthWhenIdleFor: 10s
+  evictionInterval: 10s
 
   # the maximum lifetime of an idle connection
-  closeConnectionIfIdleFor: 1 minute
-http:
-  # The port on which the HTTP server listens for service requests.
-  # Because Java cannot drop privileges in a POSIX system, these
-  # ports cannot be in the range 1-1024. A port value of 0 will
-  # make the OS use an arbitrary unused port.
-  port: 9999
+  minIdleTime: 1 minute
 
-  # The port on which the HTTP server listens for administrative
-  # requests. Subject to the same limitations as "port".
-  adminPort: 9998
+server:
+  adminMinThreads: 1
+  adminMaxThreads: 10
+  adminContextPath: /
+  applicationContextPath: /
+  applicationConnectors:
+    - type: http
+      port: 9999
+      idleTimeout: 25 seconds
+  adminConnectors:
+    - type: http
+      port: 9998
+      idleTimeout: 25 seconds
 
 # Logging settings.
 logging:
   # The default level of all loggers. Can be OFF, ERROR, WARN, INFO, DEBUG, TRACE, or ALL.
   level: INFO
-
-  # Logger-specific levels.
   loggers:
-    # Sets the level for 'com.example.app' to DEBUG.
+    # Logger-specific levels, e.g. sets the level for 'com.hello.suripu.queue' to DEBUG.
     com.hello.suripu: INFO
     com.hello.suripu.queue: DEBUG
     com.hello.suripu.core: WARN
     com.hello.suripu.coredw: WARN
     com.hello.suripu.algorithm: WARN
-
-  file:
-    enabled: true
-    threshold: DEBUG
-    currentLogFilename: /var/log/suripu-queue/suripu-queue.log
-    # When the log file rotates, the archived log will be renamed to this and gzipped. The
-    # %d is replaced with the previous day (yyyy-MM-dd). Custom rolling windows can be created
-    # by passing a SimpleDateFormat-compatible format as an argument: "%d{yyyy-MM-dd-hh}".
-    archivedLogFilenamePattern: /var/log/suripu-queue/suripu-queue-%d{yyyy-MM-dd}.log.gz
-    # The number of archived files to keep.
-    archivedFileCount: 7
-    # The timezone used to format dates. HINT: USE THE DEFAULT, UTC.
-    timeZone: UTC
+  appenders:
+    - type: file
+      threshold: DEBUG
+      currentLogFilename: /var/log/suripu-queue/suripu-queue.log
+      archivedLogFilenamePattern: /var/log/suripu-queue/suripu-queue-%d{yyyy-MM-dd}.log.gz
+      archivedFileCount: 7
 
 sleep_stats_version: v_0_2
 

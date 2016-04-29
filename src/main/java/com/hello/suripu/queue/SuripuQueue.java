@@ -11,7 +11,9 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.amazonaws.services.sqs.AmazonSQSAsyncClient;
 import com.amazonaws.services.sqs.buffered.AmazonSQSBufferedAsyncClient;
-import com.google.common.base.Joiner;
+import com.codahale.metrics.MetricFilter;
+import com.codahale.metrics.graphite.Graphite;
+import com.codahale.metrics.graphite.GraphiteReporter;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.hello.suripu.core.ObjectGraphRoot;
@@ -40,12 +42,11 @@ import com.hello.suripu.core.db.colors.SenseColorDAOSQLImpl;
 import com.hello.suripu.core.db.util.JodaArgumentFactory;
 import com.hello.suripu.core.db.util.PostgresIntegerArrayArgumentFactory;
 import com.hello.suripu.core.processors.TimelineProcessor;
-import com.hello.suripu.coredw.clients.AmazonDynamoDBClientFactory;
-import com.hello.suripu.coredw.clients.TaimurainHttpClient;
-import com.hello.suripu.coredw.configuration.S3BucketConfiguration;
-import com.hello.suripu.coredw.configuration.TaimurainHttpClientConfiguration;
-import com.hello.suripu.coredw.db.SleepHmmDAODynamoDB;
-import com.hello.suripu.coredw.metrics.RegexMetricPredicate;
+import com.hello.suripu.coredw8.clients.AmazonDynamoDBClientFactory;
+import com.hello.suripu.coredw8.clients.TaimurainHttpClient;
+import com.hello.suripu.coredw8.configuration.S3BucketConfiguration;
+import com.hello.suripu.coredw8.configuration.TaimurainHttpClientConfiguration;
+import com.hello.suripu.coredw8.db.SleepHmmDAODynamoDB;
 import com.hello.suripu.queue.cli.PopulateTimelineQueueCommand;
 import com.hello.suripu.queue.cli.TimelineQueueWorkerCommand;
 import com.hello.suripu.queue.configuration.SQSConfiguration;
@@ -58,24 +59,24 @@ import com.hello.suripu.queue.resources.StatsResource;
 import com.hello.suripu.queue.timeline.TimelineQueueConsumerManager;
 import com.hello.suripu.queue.timeline.TimelineQueueProcessor;
 import com.hello.suripu.queue.timeline.TimelineQueueProducerManager;
-import com.yammer.dropwizard.Service;
-import com.yammer.dropwizard.client.HttpClientBuilder;
-import com.yammer.dropwizard.config.Bootstrap;
-import com.yammer.dropwizard.config.Environment;
-import com.yammer.dropwizard.jdbi.DBIFactory;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.reporting.GraphiteReporter;
+import io.dropwizard.Application;
+import io.dropwizard.client.HttpClientBuilder;
+import io.dropwizard.jdbi.DBIFactory;
+import io.dropwizard.jdbi.bundles.DBIExceptionsBundle;
+import io.dropwizard.setup.Bootstrap;
+import io.dropwizard.setup.Environment;
+import io.dropwizard.util.Duration;
 import org.skife.jdbi.v2.DBI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
+import java.net.InetSocketAddress;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class SuripuQueue extends Service<SuripuQueueConfiguration> {
+public class SuripuQueue extends Application<SuripuQueueConfiguration> {
     private static final Logger LOGGER = LoggerFactory.getLogger(SuripuQueue.class);
 
     public static void main(final String[] args) throws Exception {
@@ -85,8 +86,9 @@ public class SuripuQueue extends Service<SuripuQueueConfiguration> {
 
     @Override
     public void initialize(Bootstrap<SuripuQueueConfiguration> bootstrap) {
-        bootstrap.addCommand(new TimelineQueueWorkerCommand(this, "timeline_generator", "generate timeline"));
-        bootstrap.addCommand(new PopulateTimelineQueueCommand(this, "write_batch_messages", "insert queue message to generate timelines"));
+        bootstrap.addBundle(new DBIExceptionsBundle());
+        bootstrap.addCommand(new TimelineQueueWorkerCommand());
+        bootstrap.addCommand(new PopulateTimelineQueueCommand());
     }
 
     @Override
@@ -101,12 +103,15 @@ public class SuripuQueue extends Service<SuripuQueueConfiguration> {
 
             final String prefix = String.format("%s.%s.%s", apiKey, env, "suripu-queue");
 
-            final List<String> metrics = configuration.getGraphite().getIncludeMetrics();
-            final RegexMetricPredicate predicate = new RegexMetricPredicate(metrics);
-            final Joiner joiner = Joiner.on(", ");
-            LOGGER.info("key=suripu-queue Logging the following metrics: {}", joiner.join(metrics));
+            final Graphite graphite = new Graphite(new InetSocketAddress(graphiteHostName, 2003));
+            final GraphiteReporter reporter = GraphiteReporter.forRegistry(environment.metrics())
+                    .prefixedWith(prefix)
+                    .convertRatesTo(TimeUnit.SECONDS)
+                    .convertDurationsTo(TimeUnit.MILLISECONDS)
+                    .filter(MetricFilter.ALL)
+                    .build(graphite);
+            reporter.start(interval, TimeUnit.SECONDS);
 
-            GraphiteReporter.enable(Metrics.defaultRegistry(), interval, TimeUnit.SECONDS, graphiteHostName, 2003, prefix, predicate);
 
             LOGGER.info("key=suripu-queue action=metrics-enabled.");
         } else {
@@ -129,17 +134,15 @@ public class SuripuQueue extends Service<SuripuQueueConfiguration> {
         // get SQS queue url
         final Optional<String> optionalSqsQueueUrl = TimelineQueueProcessor.getSQSQueueURL(sqsClient, sqsConfig.getSqsQueueName());
         if (!optionalSqsQueueUrl.isPresent()) {
-            LOGGER.error("key=suripu-queue error=no-sqs-queue-found value=queue-name-{}", sqsConfig.getSqsQueueName());
+            LOGGER.error("key=suripu-queue error=no-sqs-queue-found queue-name={}", sqsConfig.getSqsQueueName());
             throw new Exception("Invalid queue name");
         }
 
         final String sqsQueueUrl = optionalSqsQueueUrl.get();
 
-        //final DBI sensorDB = managedDataSourceFactory.build()  new DBI(managedDataSourceFactory.build(configuration.getSensorDB()));
-
         final DBIFactory factory = new DBIFactory();
-        final DBI sensorDB = factory.build(environment, configuration.getSensorDB(), "sensors-postgresql");
-        final DBI commonDB = factory.build(environment, configuration.getCommonDB(), "common-postgresql");
+        final DBI commonDB = factory.build(environment, configuration.getCommonDB(), "commonDB");
+        final DBI sensorDB = factory.build(environment, configuration.getSensorDB(), "redshift-sensor-db");
 
         sensorDB.registerArgumentFactory(new JodaArgumentFactory());
         sensorDB.registerArgumentFactory(new PostgresIntegerArrayArgumentFactory());
@@ -220,7 +223,9 @@ public class SuripuQueue extends Service<SuripuQueueConfiguration> {
         final TaimurainHttpClientConfiguration taimurainHttpClientConfiguration = configuration.getTaimurainHttpClientConfiguration();
 
         final TaimurainHttpClient taimurainHttpClient = TaimurainHttpClient.create(
-                new HttpClientBuilder().using(taimurainHttpClientConfiguration.getHttpClientConfiguration()).build(),
+                new HttpClientBuilder(environment)
+                        .using(taimurainHttpClientConfiguration.getHttpClientConfiguration())
+                        .build("taimurain"),
                 taimurainHttpClientConfiguration.getEndpoint());
 
 
@@ -242,33 +247,41 @@ public class SuripuQueue extends Service<SuripuQueueConfiguration> {
                 taimurainHttpClient);
 
 
-
         final long keepAliveTimeSeconds = 2L;
 
         // create queue consumer
         final TimelineQueueProcessor queueProcessor = new TimelineQueueProcessor(sqsQueueUrl, sqsClient, configuration.getSqsConfiguration());
 
         // thread pool to run consumer
-        final ExecutorService consumerExecutor = environment.managedExecutorService("consumer",
-                configuration.getNumConsumerThreads(), configuration.getNumConsumerThreads(), keepAliveTimeSeconds, TimeUnit.SECONDS);
+        final int minThreadSize = 2;
+        final ExecutorService consumerExecutor = environment.lifecycle().executorService("consumer")
+                .minThreads(minThreadSize)
+                .maxThreads(configuration.getNumConsumerThreads())
+                .keepAliveTime(Duration.seconds(keepAliveTimeSeconds)).build();
 
         // thread pool to compute timelines
-        final ExecutorService timelineExecutor = environment.managedExecutorService("consumer_timeline_processor",
-                configuration.getNumTimelineThreads(), configuration.getNumTimelineThreads(), keepAliveTimeSeconds, TimeUnit.SECONDS);
+        final ExecutorService timelineExecutor = environment.lifecycle().executorService("consumer_timeline_processor")
+                .minThreads(minThreadSize)
+                .maxThreads(configuration.getNumTimelineThreads())
+                .keepAliveTime(Duration.seconds(keepAliveTimeSeconds)).build();
 
-        final TimelineQueueConsumerManager consumerManager = new TimelineQueueConsumerManager(queueProcessor, timelineProcessor, consumerExecutor, timelineExecutor);
+        final TimelineQueueConsumerManager consumerManager = new TimelineQueueConsumerManager(queueProcessor,
+                timelineProcessor, consumerExecutor, timelineExecutor, environment.metrics());
 
-        environment.manage(consumerManager);
+        environment.lifecycle().manage(consumerManager);
 
 
         // create queue producer to insert messages into sqs queue
 
         // Thread pool to send batch messages in parallel
-        final ExecutorService sendMessageExecutor = environment.managedExecutorService("producer_send_message",
-                configuration.getNumProducerThreads(), configuration.getNumProducerThreads(), keepAliveTimeSeconds, TimeUnit.SECONDS);
+        final ExecutorService sendMessageExecutor = environment.lifecycle().executorService("producer_send_message")
+                .minThreads(minThreadSize)
+                .maxThreads(configuration.getNumSendMessageThreads())
+                .keepAliveTime(Duration.seconds(keepAliveTimeSeconds)).build();
 
         // Thread pool to run producer thread in a fix schedule
-        final ScheduledExecutorService producerExecutor = environment.managedScheduledExecutorService("producer", configuration.getNumProducerThreads());
+        final ScheduledExecutorService producerExecutor = environment.lifecycle().scheduledExecutorService("producer")
+                .threads(configuration.getNumProducerThreads()).build();
 
         final TimelineQueueProducerManager producerManager = new TimelineQueueProducerManager(
                 sqsClient,
@@ -277,14 +290,15 @@ public class SuripuQueue extends Service<SuripuQueueConfiguration> {
                 producerExecutor,
                 sendMessageExecutor,
                 configuration.getProducerScheduleIntervalMinutes(),
-                configuration.getNumProducerThreads());
+                configuration.getNumProducerThreads(),
+                environment.metrics());
 
-        environment.manage(producerManager);
+        environment.lifecycle().manage(producerManager);
 
         final QueueHealthCheck queueHealthCheck = new QueueHealthCheck("suripu-queue", sqsClient, sqsQueueUrl);
-        environment.addHealthCheck(queueHealthCheck);
+        environment.healthChecks().register("suripu-queue", queueHealthCheck);
 
-        environment.addResource(new StatsResource(producerManager, consumerManager));
-        environment.addResource(new ConfigurationResource(configuration));
+        environment.jersey().register(new StatsResource(producerManager, consumerManager));
+        environment.jersey().register(new ConfigurationResource(configuration));
     }
 }
