@@ -94,41 +94,24 @@ server:
     - type: http
       port: 9998
       idleTimeout: 25 seconds
-  requestLog:
-    timeZone: UTC
-    appenders:
-      - type: file
-        currentLogFilename: /var/log/suripu-queue/suripu-queue-access.log
-        threshold: ALL
-        archive: true
-        archivedLogFilenamePattern: /var/log/suripu-queue/suripu-queue-access-%d{yyyy-MM-dd}.log.gz
-        archivedFileCount: 7
 
 # Logging settings.
 logging:
   # The default level of all loggers. Can be OFF, ERROR, WARN, INFO, DEBUG, TRACE, or ALL.
   level: INFO
-
-  # Logger-specific levels.
   loggers:
-    # Sets the level for 'com.example.app' to DEBUG.
+    # Logger-specific levels, e.g. sets the level for 'com.hello.suripu.queue' to DEBUG.
     com.hello.suripu: INFO
     com.hello.suripu.queue: DEBUG
     com.hello.suripu.core: WARN
     com.hello.suripu.coredw: WARN
     com.hello.suripu.algorithm: WARN
-
-#  appenders:
-#      - type: file
-#        threshold: DEBUG
-#        currentLogFilename: /var/log/suripu-queue/suripu-queue.log
-#        archivedLogFilenamePattern: /var/log/suripu-queue/suripu-queue-%d{yyyy-MM-dd}.log.gz
-#        archivedFileCount: 7
-#      - type: papertrail
-#        host: logs2.papertrailapp.com
-#        port: 11366
-#        ident: suripu-queue-dev
-
+  appenders:
+    - type: file
+      threshold: DEBUG
+      currentLogFilename: /var/log/suripu-queue/suripu-queue.log
+      archivedLogFilenamePattern: /var/log/suripu-queue/suripu-queue-%d{yyyy-MM-dd}.log.gz
+      archivedFileCount: 7
 
 sleep_stats_version: v_0_2
 
