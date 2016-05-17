@@ -50,6 +50,7 @@ import com.hello.suripu.coredw8.clients.AmazonDynamoDBClientFactory;
 import com.hello.suripu.coredw8.clients.TaimurainHttpClient;
 import com.hello.suripu.coredw8.configuration.S3BucketConfiguration;
 import com.hello.suripu.coredw8.configuration.TaimurainHttpClientConfiguration;
+import com.hello.suripu.coredw8.configuration.TimelineAlgorithmConfiguration;
 import com.hello.suripu.coredw8.db.SleepHmmDAODynamoDB;
 import com.hello.suripu.queue.configuration.SQSConfiguration;
 import com.hello.suripu.queue.configuration.SuripuQueueConfiguration;
@@ -355,7 +356,7 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
                         .build("taimurain"),
                 taimurainHttpClientConfiguration.getEndpoint());
 
-
+        final TimelineAlgorithmConfiguration timelineAlgorithmConfiguration = new TimelineAlgorithmConfiguration();
         return TimelineProcessor.createTimelineProcessor(
                 pillDataDAODynamoDB,
                 deviceDAO,
@@ -371,7 +372,8 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
                 calibrationDAO,
                 defaultModelEnsembleDAO,
                 userTimelineTestGroupDAO,
-                taimurainHttpClient);
+                taimurainHttpClient,
+                timelineAlgorithmConfiguration);
 
     }
 
