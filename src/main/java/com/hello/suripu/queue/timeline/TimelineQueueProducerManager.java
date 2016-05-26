@@ -150,6 +150,7 @@ public class TimelineQueueProducerManager implements Managed {
                     sendMessages();
                 } catch (Exception exception) {
                     LOGGER.error("key=suripu-queue-producer action=fail-to-start-msg-production");
+                    LOGGER.error("key=suripu-queue-producer error={}", exception.getMessage());
                     exception.printStackTrace();
 
                 }
