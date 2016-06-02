@@ -162,6 +162,7 @@ dynamodb:
     feature_extraction_models: prod_feature_extraction_models
     ring_time_history: prod_ring_history_by_account
     sleep_hmm: prod_sleephmm
+    sleep_score_parameters: prod_sleep_score_parameters
     sleep_stats: prod_sleep_stats
   endpoints:
     features : http://dynamodb.us-east-1.amazonaws.com
@@ -174,6 +175,7 @@ dynamodb:
     feature_extraction_models: http://dynamodb.us-east-1.amazonaws.com
     ring_time_history: http://dynamodb.us-east-1.amazonaws.com
     sleep_hmm: http://dynamodb.us-east-1.amazonaws.com
+    sleep_score_parameters: http://dynamodb.us-east-1.amazonaws.com
     sleep_stats: http://dynamodb.us-east-1.amazonaws.com
 
 
