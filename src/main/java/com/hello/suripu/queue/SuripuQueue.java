@@ -34,6 +34,8 @@ import com.hello.suripu.core.db.OnlineHmmModelsDAO;
 import com.hello.suripu.core.db.OnlineHmmModelsDAODynamoDB;
 import com.hello.suripu.core.db.PillDataDAODynamoDB;
 import com.hello.suripu.core.db.RingTimeHistoryDAODynamoDB;
+import com.hello.suripu.core.db.SleepScoreParametersDAO;
+import com.hello.suripu.core.db.SleepScoreParametersDynamoDB;
 import com.hello.suripu.core.db.SleepStatsDAODynamoDB;
 import com.hello.suripu.core.db.UserTimelineTestGroupDAO;
 import com.hello.suripu.core.db.UserTimelineTestGroupDAOImpl;
@@ -209,6 +211,10 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
         final CalibrationDAO calibrationDAO = CalibrationDynamoDB.create(calibrationDynamoDBClient,
                 tableNames.get(DynamoDBTableName.CALIBRATION));
 
+        final AmazonDynamoDB sleepScoreParametersClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.SLEEP_SCORE_PARAMETERS);
+        final SleepScoreParametersDAO sleepScoreParametersDAO = new SleepScoreParametersDynamoDB(sleepScoreParametersClient, tableNames.get(DynamoDBTableName.SLEEP_SCORE_PARAMETERS));
+
+
         /* Default model ensemble for all users  */
         final S3BucketConfiguration timelineModelEnsemblesConfig = configuration.getTimelineModelEnsemblesConfiguration();
         final S3BucketConfiguration seedModelConfig = configuration.getTimelineSeedModelConfiguration();
@@ -245,6 +251,7 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
                 calibrationDAO,
                 defaultModelEnsembleDAO,
                 userTimelineTestGroupDAO,
+                sleepScoreParametersDAO,
                 taimurainHttpClient,
                 timelineAlgorithmConfiguration);
 
