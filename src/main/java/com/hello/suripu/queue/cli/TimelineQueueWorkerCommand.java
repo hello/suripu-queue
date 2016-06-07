@@ -233,29 +233,28 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
 
             messagesReceived.mark(messages.size());
 
-            final List<Future<Optional<TimelineQueueProcessor.TimelineMessage>>> futures = Lists.newArrayListWithCapacity(messages.size());
+            final List<Future<TimelineQueueProcessor.TimelineMessage>> futures = Lists.newArrayListWithCapacity(messages.size());
 
             if (!messages.isEmpty()) {
                 for (final TimelineQueueProcessor.TimelineMessage message : messages) {
                     final TimelineGenerator generator = new TimelineGenerator(timelineProcessor, message);
-                    final Future<Optional<TimelineQueueProcessor.TimelineMessage>> future = executor.submit(generator);
+                    final Future<TimelineQueueProcessor.TimelineMessage> future = executor.submit(generator);
                     futures.add(future);
                 }
 
                 final List<DeleteMessageBatchRequestEntry> processedHandlers = Lists.newArrayList();
-                for (final Future<Optional<TimelineQueueProcessor.TimelineMessage>> future : futures) {
-                    final Optional<TimelineQueueProcessor.TimelineMessage> processed = future.get();
+                for (final Future<TimelineQueueProcessor.TimelineMessage> future : futures) {
+                    final TimelineQueueProcessor.TimelineMessage processed = future.get();
 
-                    if (!processed.isPresent()) {
-                        noTimeline.mark();
-                        continue;
-                    }
-
-                    processedHandlers.add(new DeleteMessageBatchRequestEntry(processed.get().messageId, processed.get().messageHandler));
-                    if (processed.get().sleepScore > 0) {
-                        validSleepScore.mark();
+                    processedHandlers.add(new DeleteMessageBatchRequestEntry(processed.messageId, processed.messageHandler));
+                    if (processed.sleepScore.isPresent()) {
+                        if (processed.sleepScore.get() > 0) {
+                            validSleepScore.mark();
+                        } else {
+                            invalidSleepScore.mark();
+                        }
                     } else {
-                        invalidSleepScore.mark();
+                        noTimeline.mark();
                     }
                 }
 
