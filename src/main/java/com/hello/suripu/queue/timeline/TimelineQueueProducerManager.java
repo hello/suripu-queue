@@ -151,8 +151,13 @@ public class TimelineQueueProducerManager implements Managed {
                 } catch (Exception exception) {
                     LOGGER.error("key=suripu-queue-producer action=fail-to-start-msg-production");
                     LOGGER.error("key=suripu-queue-producer error={}", exception.getMessage());
-                    exception.printStackTrace();
-
+                    LOGGER.error("key=suripu-queue-producer error=exception action=shutting-down");
+                    try {
+                        Thread.sleep(2000L);
+                    } catch (InterruptedException e) {
+                        LOGGER.error("error=sleep-fail solution=get-Sense-sleep-better");
+                    }
+                    System.exit(1);
                 }
             }
         }, this.scheduleIntervalMinutes, this.scheduleIntervalMinutes, TimeUnit.MINUTES);
