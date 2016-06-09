@@ -3,7 +3,6 @@ package com.hello.suripu.queue.timeline;
 import com.amazonaws.services.sqs.model.DeleteMessageBatchRequestEntry;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.hello.suripu.core.processors.TimelineProcessor;
 import io.dropwizard.lifecycle.Managed;
@@ -119,7 +118,7 @@ public class TimelineQueueConsumerManager implements Managed {
 
             messagesReceived.mark(messages.size());
 
-            final List<Future<Optional<TimelineQueueProcessor.TimelineMessage>>> futures = Lists.newArrayListWithCapacity(messages.size());
+            final List<Future<TimelineQueueProcessor.TimelineMessage>> futures = Lists.newArrayListWithCapacity(messages.size());
 
             if (!messages.isEmpty()) {
                 this.totalRunningIterations++;
@@ -128,25 +127,25 @@ public class TimelineQueueConsumerManager implements Managed {
                 // generate all the timelines
                 for (final TimelineQueueProcessor.TimelineMessage message : messages) {
                     final TimelineGenerator generator = new TimelineGenerator(this.timelineProcessor, message);
-                    final Future<Optional<TimelineQueueProcessor.TimelineMessage>> future = timelineExecutor.submit(generator);
+                    final Future<TimelineQueueProcessor.TimelineMessage> future = timelineExecutor.submit(generator);
                     futures.add(future);
                 }
 
                 // prepare to delete processed messages
                 final List<DeleteMessageBatchRequestEntry> processedHandlers = Lists.newArrayList();
-                for (final Future<Optional<TimelineQueueProcessor.TimelineMessage>> future : futures) {
-                    final Optional<TimelineQueueProcessor.TimelineMessage> processed = future.get();
+                for (final Future<TimelineQueueProcessor.TimelineMessage> future : futures) {
+                    final TimelineQueueProcessor.TimelineMessage processed = future.get();
 
-                    if (!processed.isPresent()) {
-                        noTimeline.mark();
-                        continue;
-                    }
+                    processedHandlers.add(new DeleteMessageBatchRequestEntry(processed.messageId, processed.messageHandler));
 
-                    processedHandlers.add(new DeleteMessageBatchRequestEntry(processed.get().messageId, processed.get().messageHandler));
-                    if (processed.get().sleepScore > 0) {
-                        validSleepScore.mark();
+                    if (processed.sleepScore.isPresent()) {
+                        if (processed.sleepScore.get() > 0) {
+                            validSleepScore.mark();
+                        } else {
+                            invalidSleepScore.mark();
+                        }
                     } else {
-                        invalidSleepScore.mark();
+                        noTimeline.mark();
                     }
                 }
 

@@ -13,7 +13,7 @@
         <java.version>1.7</java.version>
         <jodatime.version>20150319</jodatime.version>
         <metrics.version>3.1.0</metrics.version>
-        <suripu.version>0.8.5270</suripu.version>
+        <suripu.version>0.8.5292</suripu.version>
         <opencsv.version>3.3</opencsv.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>

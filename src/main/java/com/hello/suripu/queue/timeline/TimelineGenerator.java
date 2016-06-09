@@ -15,7 +15,7 @@ import java.util.concurrent.Callable;
  * Created by kingshy on 1/11/16
  */
 
-public class TimelineGenerator implements Callable<Optional<TimelineQueueProcessor.TimelineMessage>> {
+public class TimelineGenerator implements Callable<TimelineQueueProcessor.TimelineMessage> {
     private static final Logger LOGGER = LoggerFactory.getLogger(TimelineGenerator.class);
 
     final private TimelineProcessor timelineProcessor;
@@ -27,7 +27,7 @@ public class TimelineGenerator implements Callable<Optional<TimelineQueueProcess
     }
 
     @Override
-    public Optional<TimelineQueueProcessor.TimelineMessage> call() throws Exception {
+    public TimelineQueueProcessor.TimelineMessage call() throws Exception {
         try {
             final TimelineProcessor newTimelineProcessor = timelineProcessor.copyMeWithNewUUID(UUID.randomUUID());
             final TimelineResult result = newTimelineProcessor.retrieveTimelinesFast(message.accountId, message.targetDate, Optional.<TimelineFeedback>absent());
@@ -39,12 +39,13 @@ public class TimelineGenerator implements Callable<Optional<TimelineQueueProcess
                     LOGGER.debug("account {}, date {}, NO SCORE!", message.accountId, message.targetDate);
                 }
                 message.setScore(timeline.score);
-                return Optional.of(message);
             }
         } catch (Exception exception) {
-            LOGGER.error("key=consumer-timeline-generator error=timeline-processor msg={}", exception.getMessage());
+            LOGGER.error("key=consumer-timeline-generator error=timeline-processor msg={} account_id={} night_date={}",
+                    exception.getMessage(), message.accountId, message.targetDate);
+            message.setEmptyScore();
         }
-        return Optional.absent();
+        return message;
     }
 }
 

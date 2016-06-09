@@ -38,19 +38,19 @@ public class TimelineQueueProcessor {
 
 
     public static class TimelineMessage {
-        public static Integer DEFAULT_SLEEP_SCORE = 0;
+        public static Optional<Integer> DEFAULT_SLEEP_SCORE = Optional.of(0);
 
         public Long accountId;
         public DateTime targetDate;
         public String messageHandler;
         public String messageId;
-        public Integer sleepScore;
+        public Optional<Integer> sleepScore;
 
         public TimelineMessage(final Long accountId,
                                final DateTime targetDate,
                                final String messageId,
                                final String messageHandler,
-                               final Integer sleepScore) {
+                               final Optional<Integer> sleepScore) {
             this.accountId = accountId;
             this.targetDate = targetDate;
             this.messageId = messageId;
@@ -58,7 +58,8 @@ public class TimelineQueueProcessor {
             this.sleepScore = sleepScore;
         }
 
-        public void setScore(final Integer score) { this.sleepScore = score; }
+        public void setScore(final Integer score) { this.sleepScore = Optional.of(score); }
+        public void setEmptyScore() { this.sleepScore = Optional.absent(); }
     }
 
     public TimelineQueueProcessor(final String sqsQueueUrl, final AmazonSQSAsync sqsClient, final SQSConfiguration config) {
