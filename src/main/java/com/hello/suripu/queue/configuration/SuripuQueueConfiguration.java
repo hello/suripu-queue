@@ -90,13 +90,13 @@ public class SuripuQueueConfiguration extends Configuration{
 
 
     @JsonProperty("num_queue_consumer_threads")
-    @Max(10)
+    @Max(20)
     @Min(1)
     private int numConsumerThreads = 2;
     public int getNumConsumerThreads() { return this.numConsumerThreads; }
 
     @JsonProperty("num_compute_timeline_threads")
-    @Max(10)
+    @Max(20)
     @Min(1)
     private int numTimelineThreads = 5;
     public int getNumTimelineThreads() { return this.numTimelineThreads; }
