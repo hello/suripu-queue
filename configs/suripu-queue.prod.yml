@@ -190,6 +190,6 @@ num_queue_producer_threads: 2
 num_send_message_threads: 10
 
 num_queue_consumer_threads: 2
-num_compute_timeline_threads: 10
+num_compute_timeline_threads: 15
 
 queue_producer_interval_minutes: 10
