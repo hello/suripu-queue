@@ -77,7 +77,6 @@ public class TimelineQueueProcessor {
      * @param numDays no. of days to generate
      */
     public void sendMessages(final long accountId, final int numDays) {
-        final TimelineQueueProtos.Message.Builder messageBuilder = TimelineQueueProtos.Message.newBuilder();
         final DateTime now = DateTime.now().withTimeAtStartOfDay();
 
         for (int i = 2; i <= numDays+1; i++) {
