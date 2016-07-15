@@ -4,7 +4,7 @@ import com.amazonaws.services.sqs.model.DeleteMessageBatchRequestEntry;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Lists;
-import com.hello.suripu.core.processors.TimelineProcessor;
+import com.hello.suripu.coredw8.timeline.InstrumentedTimelineProcessor;
 import io.dropwizard.lifecycle.Managed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +24,7 @@ public class TimelineQueueConsumerManager implements Managed {
     private static final long SLEEP_WHEN_NO_MESSAGES_MILLIS = 10000L; // 10 secs
 
     private final TimelineQueueProcessor queueProcessor;
-    private final TimelineProcessor timelineProcessor;
+    private final InstrumentedTimelineProcessor timelineProcessor;
 
     private final ExecutorService timelineExecutor;
     private final ExecutorService consumerExecutor;
@@ -44,7 +44,7 @@ public class TimelineQueueConsumerManager implements Managed {
     private long totalRunningIterations;
 
     public TimelineQueueConsumerManager(final TimelineQueueProcessor queueProcessor,
-                                        final TimelineProcessor timelineProcessor,
+                                        final InstrumentedTimelineProcessor timelineProcessor,
                                         final ExecutorService consumerExecutor,
                                         final ExecutorService timelineExecutors,
                                         final MetricRegistry metrics
