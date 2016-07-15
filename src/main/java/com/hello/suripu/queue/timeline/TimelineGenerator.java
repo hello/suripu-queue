@@ -4,7 +4,7 @@ import com.google.common.base.Optional;
 import com.hello.suripu.core.models.Timeline;
 import com.hello.suripu.core.models.TimelineFeedback;
 import com.hello.suripu.core.models.TimelineResult;
-import com.hello.suripu.core.processors.TimelineProcessor;
+import com.hello.suripu.coredw8.timeline.InstrumentedTimelineProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,10 +18,10 @@ import java.util.concurrent.Callable;
 public class TimelineGenerator implements Callable<TimelineQueueProcessor.TimelineMessage> {
     private static final Logger LOGGER = LoggerFactory.getLogger(TimelineGenerator.class);
 
-    final private TimelineProcessor timelineProcessor;
+    final private InstrumentedTimelineProcessor timelineProcessor;
     final private TimelineQueueProcessor.TimelineMessage message;
 
-    public TimelineGenerator(TimelineProcessor timelineProcessor, TimelineQueueProcessor.TimelineMessage message) {
+    public TimelineGenerator(InstrumentedTimelineProcessor timelineProcessor, TimelineQueueProcessor.TimelineMessage message) {
         this.timelineProcessor = timelineProcessor;
         this.message = message;
     }
@@ -29,7 +29,7 @@ public class TimelineGenerator implements Callable<TimelineQueueProcessor.Timeli
     @Override
     public TimelineQueueProcessor.TimelineMessage call() throws Exception {
         try {
-            final TimelineProcessor newTimelineProcessor = timelineProcessor.copyMeWithNewUUID(UUID.randomUUID());
+            final InstrumentedTimelineProcessor newTimelineProcessor = timelineProcessor.copyMeWithNewUUID(UUID.randomUUID());
             final TimelineResult result = newTimelineProcessor.retrieveTimelinesFast(message.accountId, message.targetDate, Optional.<TimelineFeedback>absent());
             if (!result.getTimelineLogV2().isEmpty()) {
                 final Timeline timeline = result.timelines.get(0);

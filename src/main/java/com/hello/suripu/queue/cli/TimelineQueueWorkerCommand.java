@@ -47,13 +47,13 @@ import com.hello.suripu.core.db.colors.SenseColorDAO;
 import com.hello.suripu.core.db.colors.SenseColorDAOSQLImpl;
 import com.hello.suripu.core.db.util.JodaArgumentFactory;
 import com.hello.suripu.core.db.util.PostgresIntegerArrayArgumentFactory;
-import com.hello.suripu.core.processors.TimelineProcessor;
 import com.hello.suripu.coredw8.clients.AmazonDynamoDBClientFactory;
 import com.hello.suripu.coredw8.clients.TaimurainHttpClient;
 import com.hello.suripu.coredw8.configuration.S3BucketConfiguration;
 import com.hello.suripu.coredw8.configuration.TaimurainHttpClientConfiguration;
 import com.hello.suripu.coredw8.configuration.TimelineAlgorithmConfiguration;
 import com.hello.suripu.coredw8.db.SleepHmmDAODynamoDB;
+import com.hello.suripu.coredw8.timeline.InstrumentedTimelineProcessor;
 import com.hello.suripu.queue.configuration.SQSConfiguration;
 import com.hello.suripu.queue.configuration.SuripuQueueConfiguration;
 import com.hello.suripu.queue.modules.RolloutQueueModule;
@@ -225,7 +225,7 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
         final Meter invalidSleepScore = metrics.meter(MetricRegistry.name(klass, "invalid-sleep-score", "invalid-score"));
         final Meter noTimeline = metrics.meter(MetricRegistry.name(klass, "timeline-fail", "fail-to-created"));
 
-        final TimelineProcessor timelineProcessor = createTimelineProcessor(environment, provider, configuration);
+        final InstrumentedTimelineProcessor timelineProcessor = createTimelineProcessor(environment, provider, configuration);
         int numEmptyQueueIterations = 0;
 
         do {
@@ -275,7 +275,7 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
         } while (isRunning);
     }
 
-    private TimelineProcessor createTimelineProcessor(final Environment environment,
+    private InstrumentedTimelineProcessor createTimelineProcessor(final Environment environment,
                                                       final AWSCredentialsProvider provider,
                                                       final SuripuQueueConfiguration config)throws Exception {
 
@@ -361,7 +361,7 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
                 taimurainHttpClientConfiguration.getEndpoint());
 
         final TimelineAlgorithmConfiguration timelineAlgorithmConfiguration = new TimelineAlgorithmConfiguration();
-        return TimelineProcessor.createTimelineProcessor(
+        return InstrumentedTimelineProcessor.createTimelineProcessor(
                 pillDataDAODynamoDB,
                 deviceDAO,
                 deviceDataDAODynamoDB,
@@ -378,7 +378,8 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
                 userTimelineTestGroupDAO,
                 sleepScoreParametersDAO,
                 taimurainHttpClient,
-                timelineAlgorithmConfiguration);
+                timelineAlgorithmConfiguration,
+                environment.metrics());
 
     }
 
