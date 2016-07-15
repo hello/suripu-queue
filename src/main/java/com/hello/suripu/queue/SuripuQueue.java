@@ -43,13 +43,13 @@ import com.hello.suripu.core.db.colors.SenseColorDAO;
 import com.hello.suripu.core.db.colors.SenseColorDAOSQLImpl;
 import com.hello.suripu.core.db.util.JodaArgumentFactory;
 import com.hello.suripu.core.db.util.PostgresIntegerArrayArgumentFactory;
-import com.hello.suripu.core.processors.TimelineProcessor;
 import com.hello.suripu.coredw8.clients.AmazonDynamoDBClientFactory;
 import com.hello.suripu.coredw8.clients.TaimurainHttpClient;
 import com.hello.suripu.coredw8.configuration.S3BucketConfiguration;
 import com.hello.suripu.coredw8.configuration.TaimurainHttpClientConfiguration;
 import com.hello.suripu.coredw8.configuration.TimelineAlgorithmConfiguration;
 import com.hello.suripu.coredw8.db.SleepHmmDAODynamoDB;
+import com.hello.suripu.coredw8.timeline.InstrumentedTimelineProcessor;
 import com.hello.suripu.queue.cli.PopulateTimelineQueueCommand;
 import com.hello.suripu.queue.cli.TimelineQueueWorkerCommand;
 import com.hello.suripu.queue.configuration.SQSConfiguration;
@@ -236,7 +236,7 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
                 taimurainHttpClientConfiguration.getEndpoint());
 
         final TimelineAlgorithmConfiguration timelineAlgorithmConfiguration = new TimelineAlgorithmConfiguration();
-        final TimelineProcessor timelineProcessor = TimelineProcessor.createTimelineProcessor(
+        final InstrumentedTimelineProcessor timelineProcessor = InstrumentedTimelineProcessor.createTimelineProcessor(
                 pillDataDAODynamoDB,
                 deviceDAO,
                 deviceDataDAODynamoDB,
@@ -253,7 +253,8 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
                 userTimelineTestGroupDAO,
                 sleepScoreParametersDAO,
                 taimurainHttpClient,
-                timelineAlgorithmConfiguration);
+                timelineAlgorithmConfiguration,
+                environment.metrics());
 
 
         final long keepAliveTimeSeconds = 2L;
