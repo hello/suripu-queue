@@ -34,10 +34,13 @@ import com.hello.suripu.core.db.FeatureExtractionModelsDAO;
 import com.hello.suripu.core.db.FeatureExtractionModelsDAODynamoDB;
 import com.hello.suripu.core.db.FeatureStore;
 import com.hello.suripu.core.db.FeedbackReadDAO;
+import com.hello.suripu.core.db.HistoricalPairingDAO;
 import com.hello.suripu.core.db.OnlineHmmModelsDAO;
 import com.hello.suripu.core.db.OnlineHmmModelsDAODynamoDB;
+import com.hello.suripu.core.db.PairingDAO;
 import com.hello.suripu.core.db.PillDataDAODynamoDB;
 import com.hello.suripu.core.db.RingTimeHistoryDAODynamoDB;
+import com.hello.suripu.core.db.SenseDataDAODynamoDB;
 import com.hello.suripu.core.db.SleepScoreParametersDAO;
 import com.hello.suripu.core.db.SleepScoreParametersDynamoDB;
 import com.hello.suripu.core.db.SleepStatsDAODynamoDB;
@@ -47,13 +50,13 @@ import com.hello.suripu.core.db.colors.SenseColorDAO;
 import com.hello.suripu.core.db.colors.SenseColorDAOSQLImpl;
 import com.hello.suripu.core.db.util.JodaArgumentFactory;
 import com.hello.suripu.core.db.util.PostgresIntegerArrayArgumentFactory;
-import com.hello.suripu.coredw8.clients.AmazonDynamoDBClientFactory;
-import com.hello.suripu.coredw8.clients.TaimurainHttpClient;
-import com.hello.suripu.coredw8.configuration.S3BucketConfiguration;
-import com.hello.suripu.coredw8.configuration.TaimurainHttpClientConfiguration;
-import com.hello.suripu.coredw8.configuration.TimelineAlgorithmConfiguration;
-import com.hello.suripu.coredw8.db.SleepHmmDAODynamoDB;
-import com.hello.suripu.coredw8.timeline.InstrumentedTimelineProcessor;
+import com.hello.suripu.coredropwizard.clients.AmazonDynamoDBClientFactory;
+import com.hello.suripu.coredropwizard.clients.TaimurainHttpClient;
+import com.hello.suripu.coredropwizard.configuration.S3BucketConfiguration;
+import com.hello.suripu.coredropwizard.configuration.TaimurainHttpClientConfiguration;
+import com.hello.suripu.coredropwizard.configuration.TimelineAlgorithmConfiguration;
+import com.hello.suripu.coredropwizard.db.SleepHmmDAODynamoDB;
+import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessor;
 import com.hello.suripu.queue.configuration.SQSConfiguration;
 import com.hello.suripu.queue.configuration.SuripuQueueConfiguration;
 import com.hello.suripu.queue.modules.RolloutQueueModule;
@@ -360,6 +363,9 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
                         .build("taimurain"),
                 taimurainHttpClientConfiguration.getEndpoint());
 
+        final PairingDAO pairingDAO = new HistoricalPairingDAO(deviceDAO,deviceDataDAODynamoDB);
+        final com.hello.suripu.core.db.SenseDataDAO senseDataDAO = new SenseDataDAODynamoDB(pairingDAO, deviceDataDAODynamoDB, senseColorDAO, calibrationDAO);
+
         final TimelineAlgorithmConfiguration timelineAlgorithmConfiguration = new TimelineAlgorithmConfiguration();
         return InstrumentedTimelineProcessor.createTimelineProcessor(
                 pillDataDAODynamoDB,
@@ -370,10 +376,9 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
                 sleepHmmDAODynamoDB,
                 accountDAO,
                 sleepStatsDAODynamoDB,
-                senseColorDAO,
+                senseDataDAO,
                 onlineHmmModelsDAO,
                 featureExtractionDAO,
-                calibrationDAO,
                 defaultModelEnsembleDAO,
                 userTimelineTestGroupDAO,
                 sleepScoreParametersDAO,

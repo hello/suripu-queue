@@ -4,7 +4,7 @@ import com.google.common.base.Optional;
 import com.hello.suripu.core.models.Timeline;
 import com.hello.suripu.core.models.TimelineFeedback;
 import com.hello.suripu.core.models.TimelineResult;
-import com.hello.suripu.coredw8.timeline.InstrumentedTimelineProcessor;
+import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
