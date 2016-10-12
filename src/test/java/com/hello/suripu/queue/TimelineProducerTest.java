@@ -5,7 +5,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.hello.suripu.queue.models.AccountData;
-import com.hello.suripu.queue.models.SenseDataDAO;
+import com.hello.suripu.queue.models.AccountSenseDataDAO;
 import com.hello.suripu.queue.timeline.TimelineQueueProducerManager;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -29,11 +29,11 @@ import static org.mockito.Mockito.when;
 
 public class TimelineProducerTest {
     private TimelineQueueProducerManager producerManager;
-    private SenseDataDAO senseDataDAO;
+    private AccountSenseDataDAO senseDataDAO;
 
     @Before
     public void setUp() throws Exception {
-        senseDataDAO = mock(SenseDataDAO.class);
+        senseDataDAO = mock(AccountSenseDataDAO.class);
         final AmazonSQSAsync sqsClient = mock(AmazonSQSAsync.class);
         final String queueUrl = "testing";
         final ExecutorService executor = mock(ExecutorService.class);

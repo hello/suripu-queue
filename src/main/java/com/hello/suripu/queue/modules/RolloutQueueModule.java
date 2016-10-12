@@ -2,7 +2,7 @@ package com.hello.suripu.queue.modules;
 
 import com.hello.suripu.core.db.FeatureStore;
 import com.hello.suripu.core.flipper.DynamoDBAdapter;
-import com.hello.suripu.coredw8.timeline.InstrumentedTimelineProcessor;
+import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessor;
 import com.librato.rollout.RolloutAdapter;
 import com.librato.rollout.RolloutClient;
 import dagger.Module;

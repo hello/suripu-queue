@@ -10,7 +10,7 @@ import org.skife.jdbi.v2.sqlobject.customizers.RegisterMapper;
  * Created by ksg on 3/15/16
  */
 
-public interface SenseDataDAO {
+public interface AccountSenseDataDAO {
     @RegisterMapper(AccountDataMapper.class)
     @SqlQuery("SELECT account_id, MAX(offset_millis) AS offset_millis, max(ts) AS ts FROM " +
             "prod_sense_data WHERE ts >= :night_date_utc AND ts <= :current_date_utc " +

@@ -30,10 +30,13 @@ import com.hello.suripu.core.db.FeatureExtractionModelsDAO;
 import com.hello.suripu.core.db.FeatureExtractionModelsDAODynamoDB;
 import com.hello.suripu.core.db.FeatureStore;
 import com.hello.suripu.core.db.FeedbackReadDAO;
+import com.hello.suripu.core.db.HistoricalPairingDAO;
 import com.hello.suripu.core.db.OnlineHmmModelsDAO;
 import com.hello.suripu.core.db.OnlineHmmModelsDAODynamoDB;
+import com.hello.suripu.core.db.PairingDAO;
 import com.hello.suripu.core.db.PillDataDAODynamoDB;
 import com.hello.suripu.core.db.RingTimeHistoryDAODynamoDB;
+import com.hello.suripu.core.db.SenseDataDAODynamoDB;
 import com.hello.suripu.core.db.SleepScoreParametersDAO;
 import com.hello.suripu.core.db.SleepScoreParametersDynamoDB;
 import com.hello.suripu.core.db.SleepStatsDAODynamoDB;
@@ -43,19 +46,19 @@ import com.hello.suripu.core.db.colors.SenseColorDAO;
 import com.hello.suripu.core.db.colors.SenseColorDAOSQLImpl;
 import com.hello.suripu.core.db.util.JodaArgumentFactory;
 import com.hello.suripu.core.db.util.PostgresIntegerArrayArgumentFactory;
-import com.hello.suripu.coredw8.clients.AmazonDynamoDBClientFactory;
-import com.hello.suripu.coredw8.clients.TaimurainHttpClient;
-import com.hello.suripu.coredw8.configuration.S3BucketConfiguration;
-import com.hello.suripu.coredw8.configuration.TaimurainHttpClientConfiguration;
-import com.hello.suripu.coredw8.configuration.TimelineAlgorithmConfiguration;
-import com.hello.suripu.coredw8.db.SleepHmmDAODynamoDB;
-import com.hello.suripu.coredw8.timeline.InstrumentedTimelineProcessor;
+import com.hello.suripu.coredropwizard.clients.AmazonDynamoDBClientFactory;
+import com.hello.suripu.coredropwizard.clients.TaimurainHttpClient;
+import com.hello.suripu.coredropwizard.configuration.S3BucketConfiguration;
+import com.hello.suripu.coredropwizard.configuration.TaimurainHttpClientConfiguration;
+import com.hello.suripu.coredropwizard.configuration.TimelineAlgorithmConfiguration;
+import com.hello.suripu.coredropwizard.db.SleepHmmDAODynamoDB;
+import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessor;
 import com.hello.suripu.queue.cli.PopulateTimelineQueueCommand;
 import com.hello.suripu.queue.cli.TimelineQueueWorkerCommand;
 import com.hello.suripu.queue.configuration.SQSConfiguration;
 import com.hello.suripu.queue.configuration.SuripuQueueConfiguration;
 import com.hello.suripu.queue.models.QueueHealthCheck;
-import com.hello.suripu.queue.models.SenseDataDAO;
+import com.hello.suripu.queue.models.AccountSenseDataDAO;
 import com.hello.suripu.queue.modules.RolloutQueueModule;
 import com.hello.suripu.queue.resources.ConfigurationResource;
 import com.hello.suripu.queue.resources.StatsResource;
@@ -150,7 +153,7 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
         sensorDB.registerArgumentFactory(new JodaArgumentFactory());
         sensorDB.registerArgumentFactory(new PostgresIntegerArrayArgumentFactory());
 
-        final SenseDataDAO senseDataDAO = sensorDB.onDemand(SenseDataDAO.class);
+        final AccountSenseDataDAO accountSenseDataDAO = sensorDB.onDemand(AccountSenseDataDAO.class);
 
         // stuff needed to create timeline processor
         commonDB.registerArgumentFactory(new JodaArgumentFactory());
@@ -235,6 +238,10 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
                         .build("taimurain"),
                 taimurainHttpClientConfiguration.getEndpoint());
 
+
+        final PairingDAO pairingDAO = new HistoricalPairingDAO(deviceDAO,deviceDataDAODynamoDB);
+        final com.hello.suripu.core.db.SenseDataDAO senseDataDAO = new SenseDataDAODynamoDB(pairingDAO, deviceDataDAODynamoDB, senseColorDAO, calibrationDAO);
+
         final TimelineAlgorithmConfiguration timelineAlgorithmConfiguration = new TimelineAlgorithmConfiguration();
         final InstrumentedTimelineProcessor timelineProcessor = InstrumentedTimelineProcessor.createTimelineProcessor(
                 pillDataDAODynamoDB,
@@ -245,10 +252,9 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
                 sleepHmmDAODynamoDB,
                 accountDAO,
                 sleepStatsDAODynamoDB,
-                senseColorDAO,
+                senseDataDAO,
                 onlineHmmModelsDAO,
                 featureExtractionDAO,
-                calibrationDAO,
                 defaultModelEnsembleDAO,
                 userTimelineTestGroupDAO,
                 sleepScoreParametersDAO,
@@ -295,7 +301,7 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
 
         final TimelineQueueProducerManager producerManager = new TimelineQueueProducerManager(
                 sqsClient,
-                senseDataDAO,
+                accountSenseDataDAO,
                 sqsQueueUrl,
                 producerExecutor,
                 sendMessageExecutor,
