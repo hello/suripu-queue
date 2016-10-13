@@ -7,10 +7,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <properties>
-        <aws.sdk.version>1.9.37</aws.sdk.version>
+        <aws.sdk.version>1.10.34</aws.sdk.version>
         <dagger.version>1.2.2</dagger.version>
-        <dropwizard.version>0.8.2</dropwizard.version>
-        <java.version>1.7</java.version>
+        <jackson.version>2.8.1</jackson.version>
+        <dropwizard.version>1.0.0</dropwizard.version>
+        <java.version>1.8</java.version>
         <jodatime.version>20150319</jodatime.version>
         <metrics.version>3.1.0</metrics.version>
         <suripu.version>0.8.5700</suripu.version>
@@ -78,7 +79,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>18.0</version>
+            <version>19.0</version>
         </dependency>
         <dependency>
             <groupId>suripu-jodatime</groupId>
@@ -105,6 +106,11 @@
                     <artifactId>jackson-databind</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-joda</artifactId>
+            <version>${jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -259,13 +265,13 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <version>4.3.4</version>
+            <version>4.5.2</version>
         </dependency>
-        <dependency>
-            <groupId>com.dcsquare</groupId>
-            <artifactId>dropwizard-papertrail</artifactId>
-            <version>1.1</version>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>com.dcsquare</groupId>-->
+            <!--<artifactId>dropwizard-papertrail</artifactId>-->
+            <!--<version>1.1</version>-->
+        <!--</dependency>-->
     </dependencies>
     <build>
         <extensions>
