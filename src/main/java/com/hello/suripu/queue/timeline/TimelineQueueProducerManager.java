@@ -14,7 +14,7 @@ import com.google.common.collect.Maps;
 import com.hello.suripu.api.queue.TimelineQueueProtos;
 import com.hello.suripu.core.util.DateTimeUtil;
 import com.hello.suripu.queue.models.AccountData;
-import com.hello.suripu.queue.models.SenseDataDAO;
+import com.hello.suripu.queue.models.AccountSenseDataDAO;
 import io.dropwizard.lifecycle.Managed;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -45,7 +45,7 @@ public class TimelineQueueProducerManager implements Managed {
 
     private final AmazonSQSAsync sqsClient;
     private final String sqsQueueUrl;
-    private final SenseDataDAO senseDataDAO;
+    private final AccountSenseDataDAO accountSenseDataDAO;
     private final ExecutorService sendMessageExecutor;
     private final int startSendingMessageSize;
 
@@ -80,7 +80,7 @@ public class TimelineQueueProducerManager implements Managed {
     private long totalMessagesFail = 0;
 
     public TimelineQueueProducerManager(final AmazonSQSAsync sqsClient,
-                                        final SenseDataDAO senseDataDAO,
+                                        final AccountSenseDataDAO accountSenseDataDAO,
                                         final String sqsQueueUrl,
                                         final ScheduledExecutorService producerExecutor,
                                         final ExecutorService sendMessageExecutor,
@@ -88,7 +88,7 @@ public class TimelineQueueProducerManager implements Managed {
                                         final int numProducerThreads,
                                         final MetricRegistry metrics) {
         this.sqsClient = sqsClient;
-        this.senseDataDAO = senseDataDAO;
+        this.accountSenseDataDAO = accountSenseDataDAO;
         this.sqsQueueUrl = sqsQueueUrl;
         this.sendMessageExecutor = sendMessageExecutor;
         this.producerExecutor = producerExecutor;
@@ -294,7 +294,7 @@ public class TimelineQueueProducerManager implements Managed {
             LOGGER.debug("key=suripu-queue-producer now={} action=get-valid-accounts offset_millis={} target_night={}",
                     now, offsetMillis, targetNight);
 
-            final ImmutableList<AccountData> validAccounts = this.senseDataDAO.getValidAccounts(
+            final ImmutableList<AccountData> validAccounts = this.accountSenseDataDAO.getValidAccounts(
                     now.withTimeAtStartOfDay().minusDays(1),
                     now.withTimeAtStartOfDay(),
                     offsetMillis);

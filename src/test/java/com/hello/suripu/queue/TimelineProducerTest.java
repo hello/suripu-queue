@@ -5,7 +5,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.hello.suripu.queue.models.AccountData;
-import com.hello.suripu.queue.models.SenseDataDAO;
+import com.hello.suripu.queue.models.AccountSenseDataDAO;
 import com.hello.suripu.queue.timeline.TimelineQueueProducerManager;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -29,11 +29,11 @@ import static org.mockito.Mockito.when;
 
 public class TimelineProducerTest {
     private TimelineQueueProducerManager producerManager;
-    private SenseDataDAO senseDataDAO;
+    private AccountSenseDataDAO accountSenseDataDAO;
 
     @Before
     public void setUp() throws Exception {
-        senseDataDAO = mock(SenseDataDAO.class);
+        accountSenseDataDAO = mock(AccountSenseDataDAO.class);
         final AmazonSQSAsync sqsClient = mock(AmazonSQSAsync.class);
         final String queueUrl = "testing";
         final ExecutorService executor = mock(ExecutorService.class);
@@ -44,7 +44,7 @@ public class TimelineProducerTest {
 
         this.producerManager = new TimelineQueueProducerManager(
                 sqsClient,
-                senseDataDAO,
+                accountSenseDataDAO,
                 queueUrl,
                 producerExecutor,
                 executor,
@@ -66,7 +66,7 @@ public class TimelineProducerTest {
         gmt14List.add(new AccountData(10L, gmt14OffsetMillis, DateTime.now(DateTimeZone.UTC).minusHours(10)));
         gmt14List.add(new AccountData(11L, gmt14OffsetMillis, DateTime.now(DateTimeZone.UTC).minusHours(10)));
 
-        when(senseDataDAO.getValidAccounts(
+        when(accountSenseDataDAO.getValidAccounts(
                 now.withTimeAtStartOfDay().minusDays(1),
                 now.withTimeAtStartOfDay(), gmt14OffsetMillis)).thenReturn(ImmutableList.copyOf(gmt14List));
 
@@ -75,7 +75,7 @@ public class TimelineProducerTest {
         gmtMinus11List.add(new AccountData(20L, gmtMinus11OffsetMillis, DateTime.now(DateTimeZone.UTC).minusHours(11)));
         gmtMinus11List.add(new AccountData(21L, gmtMinus11OffsetMillis, DateTime.now(DateTimeZone.UTC).minusHours(11)));
 
-        when(senseDataDAO.getValidAccounts(
+        when(accountSenseDataDAO.getValidAccounts(
                 now.withTimeAtStartOfDay().minusDays(1),
                 now.withTimeAtStartOfDay(), gmtMinus11OffsetMillis)).thenReturn(ImmutableList.copyOf(gmtMinus11List));
 
