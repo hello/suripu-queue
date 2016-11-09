@@ -163,6 +163,7 @@ dynamodb:
     sleep_hmm: prod_sleephmm
     sleep_score_parameters: prod_sleep_score_parameters
     sleep_stats: prod_sleep_stats
+    timezone_history: prod_timezone_history
   endpoints:
     features : http://dynamodb.us-east-1.amazonaws.com
     sense_prefix: http://dynamodb.us-east-1.amazonaws.com
@@ -176,7 +177,7 @@ dynamodb:
     sleep_hmm: http://dynamodb.us-east-1.amazonaws.com
     sleep_score_parameters: http://dynamodb.us-east-1.amazonaws.com
     sleep_stats: http://dynamodb.us-east-1.amazonaws.com
-
+    timezone_history: http://dynamodb.us-east-1.amazonaws.com
 
 SQS_configuration:
     sqs_queue_name: prod_timeline_queue

@@ -151,6 +151,7 @@ dynamodb:
     ring_time_history: ring_history_by_account
     sleep_hmm: sleephmm
     sleep_stats: sleep_stats
+    timezone_history: timezone_history
   endpoints:
     features : http://dynamodb.us-east-1.amazonaws.com
     sense_prefix: http://localhost:7777
@@ -163,6 +164,7 @@ dynamodb:
     ring_time_history: http://localhost:7777
     sleep_hmm: http://localhost:7777
     sleep_stats: http://localhost:7777
+    timezone_history: http://localhost:7777
 
 
 num_queue_producer_threads: 2
