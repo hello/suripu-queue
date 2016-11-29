@@ -135,6 +135,7 @@ SQS_configuration:
     sqs_max_messages_read: 10
     sqs_wait_time_seconds: 10
     sqs_visibility_timeout_seconds: 5
+    timezone_history: timezone_history
 
 dynamodb:
   region: us-east-1
@@ -163,6 +164,7 @@ dynamodb:
     sleep_hmm: http://dynamodb.us-east-1.amazonaws.com
     sleep_score_parameters: http://dynamodb.us-east-1.amazonaws.com
     sleep_stats: http://dynamodb.us-east-1.amazonaws.com
+    timezone_history: http://dynamodb.us-east-1.amazonaws.com
 
 num_queue_producer_threads: 2
 num_send_message_threads: 2

@@ -12,9 +12,9 @@
         <jackson.version>2.8.1</jackson.version>
         <dropwizard.version>1.0.0</dropwizard.version>
         <java.version>1.8</java.version>
-        <jodatime.version>20150319</jodatime.version>
+        <jodatime.version>2.9.6</jodatime.version>
         <metrics.version>3.1.0</metrics.version>
-        <suripu.version>0.8.5700</suripu.version>
+        <suripu.version>0.8.5831</suripu.version>
         <opencsv.version>3.3</opencsv.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
@@ -82,8 +82,8 @@
             <version>19.0</version>
         </dependency>
         <dependency>
-            <groupId>suripu-jodatime</groupId>
-            <artifactId>suripu-jodatime</artifactId>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
             <version>${jodatime.version}</version>
             <exclusions>
                 <exclusion>
