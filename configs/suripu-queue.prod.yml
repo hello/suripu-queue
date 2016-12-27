@@ -143,11 +143,13 @@ timeline_seed_model:
   bucket: hello-timeline-models
   key: normal4.base64
 
-taimurain_http_client:
-  endpoint: http://internal-taimurain-prod-1606459001.us-east-1.elb.amazonaws.com:80
-  http_client_config:
-    keepAlive: 0s
-    timeout: 10000ms
+taimurain_configuration:
+   http_client_config:
+     keepAlive: 0s
+     timeout: 10000ms
+   endpoints:
+     neural_net : http://internal-taimurain-230356525.us-east-1.elb.amazonaws.com:80
+     neural_net_four_event: http://ec2-54-224-150-186.compute-1.amazonaws.com:5557
 
 dynamodb:
   region: us-east-1

@@ -20,7 +20,9 @@ import com.codahale.metrics.graphite.GraphiteReporter;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.hello.suripu.core.ObjectGraphRoot;
+import com.hello.suripu.core.algorithmintegration.NeuralNetEndpoint;
 import com.hello.suripu.core.configuration.DynamoDBTableName;
 import com.hello.suripu.core.db.AccountDAO;
 import com.hello.suripu.core.db.AccountDAOImpl;
@@ -51,10 +53,10 @@ import com.hello.suripu.core.db.colors.SenseColorDAO;
 import com.hello.suripu.core.db.colors.SenseColorDAOSQLImpl;
 import com.hello.suripu.core.db.util.JodaArgumentFactory;
 import com.hello.suripu.core.db.util.PostgresIntegerArrayArgumentFactory;
+import com.hello.suripu.core.util.AlgorithmType;
 import com.hello.suripu.coredropwizard.clients.AmazonDynamoDBClientFactory;
 import com.hello.suripu.coredropwizard.clients.TaimurainHttpClient;
 import com.hello.suripu.coredropwizard.configuration.S3BucketConfiguration;
-import com.hello.suripu.coredropwizard.configuration.TaimurainHttpClientConfiguration;
 import com.hello.suripu.coredropwizard.configuration.TimelineAlgorithmConfiguration;
 import com.hello.suripu.coredropwizard.db.SleepHmmDAODynamoDB;
 import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessor;
@@ -79,7 +81,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.net.URL;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -356,13 +360,16 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
                 seedModelConfig.getKey());
 
         /* Neural net endpoint information */
-        final TaimurainHttpClientConfiguration taimurainHttpClientConfiguration = config.getTaimurainHttpClientConfiguration();
+        final Map<AlgorithmType, URL> neuralNetEndpoints = config.getTaimurainConfiguration().getEndpoints();
+        final Map<AlgorithmType, NeuralNetEndpoint> neuralNetClients = Maps.newHashMap();
+        final HttpClientBuilder clientBuilder = new HttpClientBuilder(environment).using(config.getTaimurainConfiguration().getHttpClientConfiguration());
 
-        final TaimurainHttpClient taimurainHttpClient = TaimurainHttpClient.create(
-                new HttpClientBuilder(environment)
-                        .using(taimurainHttpClientConfiguration.getHttpClientConfiguration())
-                        .build("taimurain"),
-                taimurainHttpClientConfiguration.getEndpoint());
+        for (final AlgorithmType algorithmType : neuralNetEndpoints.keySet()) {
+            String url = neuralNetEndpoints.get(algorithmType).toExternalForm();
+            final TaimurainHttpClient taimurainHttpClient = TaimurainHttpClient.create(
+                    clientBuilder.build("taimurain " + algorithmType), url);
+            neuralNetClients.put(algorithmType,taimurainHttpClient);
+        }
 
         final PairingDAO pairingDAO = new HistoricalPairingDAO(deviceDAO,deviceDataDAODynamoDB);
         final com.hello.suripu.core.db.SenseDataDAO senseDataDAO = new SenseDataDAODynamoDB(pairingDAO, deviceDataDAODynamoDB, senseColorDAO, calibrationDAO);
@@ -387,7 +394,7 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
                 defaultModelEnsembleDAO,
                 userTimelineTestGroupDAO,
                 sleepScoreParametersDAO,
-                taimurainHttpClient,
+                neuralNetClients,
                 timelineAlgorithmConfiguration,
                 environment.metrics());
 
