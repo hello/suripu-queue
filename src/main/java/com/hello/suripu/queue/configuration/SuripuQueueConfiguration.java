@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hello.suripu.coredropwizard.configuration.GraphiteConfiguration;
 import com.hello.suripu.coredropwizard.configuration.NewDynamoDBConfiguration;
 import com.hello.suripu.coredropwizard.configuration.S3BucketConfiguration;
-import com.hello.suripu.coredropwizard.configuration.TaimurainHttpClientConfiguration;
+import com.hello.suripu.coredropwizard.configuration.TaimurainConfiguration;
 import io.dropwizard.Configuration;
 import io.dropwizard.db.DataSourceFactory;
 
@@ -119,10 +119,11 @@ public class SuripuQueueConfiguration extends Configuration{
     private long producerScheduleIntervalMinutes = 10L;
     public long getProducerScheduleIntervalMinutes() { return this.producerScheduleIntervalMinutes; }
 
-    @Valid
     @NotNull
-    @JsonProperty("taimurain_http_client")
-    private TaimurainHttpClientConfiguration taimurainHttpClientConfiguration;
-    public TaimurainHttpClientConfiguration getTaimurainHttpClientConfiguration() { return taimurainHttpClientConfiguration; }
+    @JsonProperty("taimurain_configuration")
+    private TaimurainConfiguration taimurainConfiguration;
+    public TaimurainConfiguration getTaimurainConfiguration() {
+        return taimurainConfiguration;
+    }
 
 }
