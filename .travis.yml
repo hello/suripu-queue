@@ -49,11 +49,10 @@ deploy:
   region: us-east-1
   on:
     tags: false
-    branch: PRODUCTION
+    branch: master
 branches:
   only:
   - master
-  - PRODUCTION
 notifications:
   email:
   - kingshy+travis-suripu-queue@sayhello.com
