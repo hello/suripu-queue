@@ -188,6 +188,13 @@ SQS_configuration:
     sqs_wait_time_seconds: 10
     sqs_visibility_timeout_seconds: 5
 
+sleep_score_sqs_configuration:
+    sqs_queue_name: prod_sleep_score_push
+    sqs_max_connections: 50
+    sqs_max_messages_read: 10
+    sqs_wait_time_seconds: 20
+    sqs_visibility_timeout_seconds: 120
+
 num_queue_producer_threads: 2
 num_send_message_threads: 10
 
@@ -195,3 +202,8 @@ num_queue_consumer_threads: 2
 num_compute_timeline_threads: 15
 
 queue_producer_interval_minutes: 10
+
+push_notification_configuration:
+  endpoint: https://kinesis.us-east-1.amazonaws.com
+  streams:
+    push_notifications: push_notifications

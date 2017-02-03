@@ -139,6 +139,13 @@ SQS_configuration:
     sqs_visibility_timeout_seconds: 5
     timezone_history: timezone_history
 
+sleep_score_sqs_configuration:
+    sqs_queue_name: dev_sleep_score_push
+    sqs_max_connections: 50
+    sqs_max_messages_read: 10
+    sqs_wait_time_seconds: 20
+    sqs_visibility_timeout_seconds: 120
+
 dynamodb:
   region: us-east-1
   tables:
@@ -175,3 +182,8 @@ num_queue_consumer_threads: 2
 num_compute_timeline_threads: 2
 
 queue_producer_interval_minutes: 10
+
+push_notification_configuration:
+  endpoint: https://kinesis.us-east-1.amazonaws.com
+  streams:
+    push_notifications: dev_push_notifications

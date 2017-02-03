@@ -139,6 +139,14 @@ SQS_configuration:
     sqs_wait_time_seconds: 10
     sqs_visibility_timeout_seconds: 5
 
+
+sleep_score_sqs_configuration:
+    sqs_queue_name: dev_sleep_score_push
+    sqs_max_connections: 50
+    sqs_max_messages_read: 10
+    sqs_wait_time_seconds: 20
+    sqs_visibility_timeout_seconds: 120
+
 dynamodb:
   region: us-east-1
   tables:
@@ -151,6 +159,7 @@ dynamodb:
     feature_extraction_models: feature_extraction_models
     ring_time_history: ring_history_by_account
     sleep_hmm: sleephmm
+    sleep_score_parameters: sleep_score_parameters
     sleep_stats: sleep_stats
     timezone_history: timezone_history
   endpoints:
@@ -164,6 +173,7 @@ dynamodb:
     feature_extraction_models: http://localhost:7777
     ring_time_history: http://localhost:7777
     sleep_hmm: http://localhost:7777
+    sleep_score_parameters: http://localhost:7777
     sleep_stats: http://localhost:7777
     timezone_history: http://localhost:7777
 
@@ -175,9 +185,7 @@ num_queue_consumer_threads: 2
 num_compute_timeline_threads: 5
 
 queue_producer_interval_minutes: 5
-
-taimurain_http_client:
-  endpoint: http://internal-taimurain-prod-1606459001.us-east-1.elb.amazonaws.com:80
-  http_client_config:
-    keepAlive: 0s
-    timeout: 10000ms
+push_notification_configuration:
+  endpoint: https://kinesis.us-east-1.amazonaws.com
+  streams:
+    push_notifications: dev_push_notifications

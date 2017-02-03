@@ -6,6 +6,8 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.kinesis.AmazonKinesis;
+import com.amazonaws.services.kinesis.AmazonKinesisClient;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.sqs.AmazonSQSAsync;
@@ -20,8 +22,11 @@ import com.google.common.collect.Maps;
 import com.hello.suripu.core.ObjectGraphRoot;
 import com.hello.suripu.core.algorithmintegration.NeuralNetEndpoint;
 import com.hello.suripu.core.configuration.DynamoDBTableName;
+import com.hello.suripu.core.configuration.QueueName;
 import com.hello.suripu.core.db.AccountDAO;
 import com.hello.suripu.core.db.AccountDAOImpl;
+import com.hello.suripu.core.db.AppStatsDAO;
+import com.hello.suripu.core.db.AppStatsDAODynamoDB;
 import com.hello.suripu.core.db.CalibrationDAO;
 import com.hello.suripu.core.db.CalibrationDynamoDB;
 import com.hello.suripu.core.db.DefaultModelEnsembleDAO;
@@ -49,6 +54,9 @@ import com.hello.suripu.core.db.colors.SenseColorDAO;
 import com.hello.suripu.core.db.colors.SenseColorDAOSQLImpl;
 import com.hello.suripu.core.db.util.JodaArgumentFactory;
 import com.hello.suripu.core.db.util.PostgresIntegerArrayArgumentFactory;
+import com.hello.suripu.core.flipper.DynamoDBAdapter;
+import com.hello.suripu.core.notifications.sender.KinesisNotificationSender;
+import com.hello.suripu.core.notifications.sender.NotificationSender;
 import com.hello.suripu.core.util.AlgorithmType;
 import com.hello.suripu.coredropwizard.clients.AmazonDynamoDBClientFactory;
 import com.hello.suripu.coredropwizard.clients.TaimurainHttpClient;
@@ -63,11 +71,13 @@ import com.hello.suripu.queue.configuration.SuripuQueueConfiguration;
 import com.hello.suripu.queue.models.AccountSenseDataDAO;
 import com.hello.suripu.queue.models.QueueHealthCheck;
 import com.hello.suripu.queue.modules.RolloutQueueModule;
+import com.hello.suripu.queue.push.PushConsumerProducer;
 import com.hello.suripu.queue.resources.ConfigurationResource;
 import com.hello.suripu.queue.resources.StatsResource;
 import com.hello.suripu.queue.timeline.TimelineQueueConsumerManager;
 import com.hello.suripu.queue.timeline.TimelineQueueProcessor;
 import com.hello.suripu.queue.timeline.TimelineQueueProducerManager;
+import com.librato.rollout.RolloutClient;
 import io.dropwizard.Application;
 import io.dropwizard.client.HttpClientBuilder;
 import io.dropwizard.jdbi.DBIFactory;
@@ -134,10 +144,12 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
         // setup SQS
         final SQSConfiguration sqsConfig = configuration.getSqsConfiguration();
         final int maxConnections = sqsConfig.getSqsMaxConnections();
-        final AmazonSQSAsync sqsClient = new AmazonSQSBufferedAsyncClient(
-                new AmazonSQSAsyncClient(provider, new ClientConfiguration()
+        final ClientConfiguration clientConfiguration = new ClientConfiguration()
                 .withMaxConnections(maxConnections)
-                .withConnectionTimeout(500)));
+                .withConnectionTimeout(500);
+
+        final AmazonSQSAsync sqsClient = new AmazonSQSBufferedAsyncClient(
+                new AmazonSQSAsyncClient(provider, clientConfiguration));
 
         final Region region = Region.getRegion(Regions.US_EAST_1);
         sqsClient.setRegion(region);
@@ -169,7 +181,6 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
         final AccountDAO accountDAO = commonDB.onDemand(AccountDAOImpl.class);
         final SenseColorDAO senseColorDAO = commonDB.onDemand(SenseColorDAOSQLImpl.class);
         final UserTimelineTestGroupDAO userTimelineTestGroupDAO = commonDB.onDemand(UserTimelineTestGroupDAOImpl.class);
-
         final ClientConfiguration clientConfig = new ClientConfiguration()
                 .withConnectionTimeout(1000)
                 .withMaxErrorRetry(5);
@@ -180,11 +191,17 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
         final ImmutableMap<DynamoDBTableName, String> tableNames = configuration.dynamoDBConfiguration().tables();
 
         final AmazonDynamoDB featuresDynamoDBClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.FEATURES);
-        final FeatureStore featureStore = new FeatureStore(featuresDynamoDBClient, configuration.dynamoDBConfiguration().tables().get(DynamoDBTableName.FEATURES), "prod");
+        final String namespace = (configuration.getDebug()) ? "dev" : "prod";
+        final FeatureStore featureStore = new FeatureStore(featuresDynamoDBClient, configuration.dynamoDBConfiguration().tables().get(DynamoDBTableName.FEATURES), namespace);
 
         final RolloutQueueModule module = new RolloutQueueModule(featureStore, 30);
         ObjectGraphRoot.getInstance().init(module);
 
+
+        //
+        final RolloutClient rolloutClient = new RolloutClient(new DynamoDBAdapter(featureStore, 10));
+
+        final AppStatsDAO appStatsDAO = new AppStatsDAODynamoDB(dynamoDBClientFactory.getForTable(DynamoDBTableName.APP_STATS), tableNames.get(DynamoDBTableName.APP_STATS));
         final AmazonDynamoDB pillDataDAODynamoDBClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.PILL_DATA);
         final PillDataDAODynamoDB pillDataDAODynamoDB = new PillDataDAODynamoDB(pillDataDAODynamoDBClient,
                 tableNames.get(DynamoDBTableName.PILL_DATA));
@@ -222,6 +239,7 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
         final AmazonDynamoDB sleepScoreParametersClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.SLEEP_SCORE_PARAMETERS);
         final SleepScoreParametersDAO sleepScoreParametersDAO = new SleepScoreParametersDynamoDB(sleepScoreParametersClient, tableNames.get(DynamoDBTableName.SLEEP_SCORE_PARAMETERS));
 
+        final AmazonDynamoDB notificationEventClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.PUSH_NOTIFICATION_EVENT);
 
         /* Default model ensemble for all users  */
         final S3BucketConfiguration timelineModelEnsemblesConfig = configuration.getTimelineModelEnsemblesConfiguration();
@@ -293,8 +311,15 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
                 .maxThreads(configuration.getNumTimelineThreads())
                 .keepAliveTime(Duration.seconds(keepAliveTimeSeconds)).build();
 
+        final AmazonKinesis kinesis = new AmazonKinesisClient(provider, clientConfiguration);
+        kinesis.setEndpoint(configuration.pushNotificationConfiguration().getEndpoint());
+        final NotificationSender notificationSender = new KinesisNotificationSender(
+                kinesis,
+                configuration.pushNotificationConfiguration().getStreams().get(QueueName.PUSH_NOTIFICATIONS)
+        );
+
         final TimelineQueueConsumerManager consumerManager = new TimelineQueueConsumerManager(queueProcessor,
-                timelineProcessor, consumerExecutor, timelineExecutor, environment.metrics());
+                timelineProcessor, consumerExecutor, timelineExecutor, environment.metrics(), notificationSender);
 
         environment.lifecycle().manage(consumerManager);
 
@@ -326,6 +351,16 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
         final QueueHealthCheck queueHealthCheck = new QueueHealthCheck("suripu-queue", sqsClient, sqsQueueUrl);
         environment.healthChecks().register("suripu-queue", queueHealthCheck);
 
+        // Timeline Trigger Queue
+        final ExecutorService triggerExecutor = environment.lifecycle().executorService("trigger")
+                .minThreads(1)
+                .maxThreads(1)
+                .keepAliveTime(Duration.seconds(keepAliveTimeSeconds)).build();
+
+        final PushConsumerProducer pushConsumerProducer = new PushConsumerProducer(
+                pillDataDAODynamoDB, triggerExecutor, sqsConfig, configuration.sleepScoreSqsConfiguration()
+        );
+        environment.lifecycle().manage(pushConsumerProducer);
         environment.jersey().register(new StatsResource(producerManager, consumerManager));
         environment.jersey().register(new ConfigurationResource(configuration));
     }
