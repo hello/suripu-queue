@@ -160,6 +160,7 @@ dynamodb:
     sleep_hmm: sleephmm
     sleep_score_parameters: sleep_score_parameters
     sleep_stats: sleep_stats
+    timezone_history: timezone_history
   endpoints:
     app_stats: http://dynamodb.us-east-1.amazonaws.com
     features : http://dynamodb.us-east-1.amazonaws.com
