@@ -2,6 +2,7 @@ package com.hello.suripu.queue.configuration;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.hello.suripu.coredropwizard.configuration.GraphiteConfiguration;
+import com.hello.suripu.coredropwizard.configuration.KinesisConfiguration;
 import com.hello.suripu.coredropwizard.configuration.NewDynamoDBConfiguration;
 import com.hello.suripu.coredropwizard.configuration.S3BucketConfiguration;
 import com.hello.suripu.coredropwizard.configuration.TaimurainConfiguration;
@@ -82,6 +83,14 @@ public class SuripuQueueConfiguration extends Configuration{
 
     @Valid
     @NotNull
+    @JsonProperty("sleep_score_sqs_configuration")
+    private SQSConfiguration sleepScoreSqsConfiguration;
+    public SQSConfiguration sleepScoreSqsConfiguration() {
+        return sleepScoreSqsConfiguration;
+    }
+
+    @Valid
+    @NotNull
     @JsonProperty("dynamodb")
     private NewDynamoDBConfiguration dynamoDBConfiguration;
     public NewDynamoDBConfiguration dynamoDBConfiguration(){
@@ -126,4 +135,10 @@ public class SuripuQueueConfiguration extends Configuration{
         return taimurainConfiguration;
     }
 
+    @NotNull
+    @JsonProperty("push_notification_configuration")
+    private KinesisConfiguration pushNotificationConfiguration;
+    public KinesisConfiguration pushNotificationConfiguration() {
+        return pushNotificationConfiguration;
+    }
 }

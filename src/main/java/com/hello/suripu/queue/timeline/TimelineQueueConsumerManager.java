@@ -4,6 +4,8 @@ import com.amazonaws.services.sqs.model.DeleteMessageBatchRequestEntry;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Lists;
+import com.hello.suripu.core.notifications.sender.NotificationSender;
+import com.hello.suripu.core.processors.FeatureFlippedProcessor;
 import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessor;
 import io.dropwizard.lifecycle.Managed;
 import org.slf4j.Logger;
@@ -18,7 +20,7 @@ import java.util.concurrent.Future;
  * docs: http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/Welcome.html
  */
 
-public class TimelineQueueConsumerManager implements Managed {
+public class TimelineQueueConsumerManager extends FeatureFlippedProcessor implements Managed {
     private static final Logger LOGGER = LoggerFactory.getLogger(TimelineQueueConsumerManager.class);
 
     private static final long SLEEP_WHEN_NO_MESSAGES_MILLIS = 10000L; // 10 secs
@@ -42,17 +44,19 @@ public class TimelineQueueConsumerManager implements Managed {
     private long totalMessagesProcessed;
     private long totalIdleIterations;
     private long totalRunningIterations;
+    private NotificationSender notificationSender;
 
     public TimelineQueueConsumerManager(final TimelineQueueProcessor queueProcessor,
                                         final InstrumentedTimelineProcessor timelineProcessor,
                                         final ExecutorService consumerExecutor,
                                         final ExecutorService timelineExecutors,
-                                        final MetricRegistry metrics
-                                        ) {
+                                        final MetricRegistry metrics,
+                                        final NotificationSender notificationSender) {
         this.queueProcessor = queueProcessor;
         this.timelineProcessor = timelineProcessor;
         this.timelineExecutor = timelineExecutors;
         this.consumerExecutor = consumerExecutor;
+        this.notificationSender = notificationSender;
 
         // metrics
         final Class klass = TimelineQueueConsumerManager.class;
@@ -126,7 +130,7 @@ public class TimelineQueueConsumerManager implements Managed {
 
                 // generate all the timelines
                 for (final TimelineQueueProcessor.TimelineMessage message : messages) {
-                    final TimelineGenerator generator = new TimelineGenerator(this.timelineProcessor, message);
+                    final TimelineGenerator generator = new TimelineGenerator(this.timelineProcessor, message, notificationSender, this.featureFlipper);
                     final Future<TimelineQueueProcessor.TimelineMessage> future = timelineExecutor.submit(generator);
                     futures.add(future);
                 }

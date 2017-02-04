@@ -21,6 +21,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.hello.suripu.api.notifications.PushNotification;
 import com.hello.suripu.core.ObjectGraphRoot;
 import com.hello.suripu.core.algorithmintegration.NeuralNetEndpoint;
 import com.hello.suripu.core.configuration.DynamoDBTableName;
@@ -53,6 +54,8 @@ import com.hello.suripu.core.db.colors.SenseColorDAO;
 import com.hello.suripu.core.db.colors.SenseColorDAOSQLImpl;
 import com.hello.suripu.core.db.util.JodaArgumentFactory;
 import com.hello.suripu.core.db.util.PostgresIntegerArrayArgumentFactory;
+import com.hello.suripu.core.notifications.PushNotificationEvent;
+import com.hello.suripu.core.notifications.sender.NotificationSender;
 import com.hello.suripu.core.util.AlgorithmType;
 import com.hello.suripu.coredropwizard.clients.AmazonDynamoDBClientFactory;
 import com.hello.suripu.coredropwizard.clients.TaimurainHttpClient;
@@ -65,6 +68,8 @@ import com.hello.suripu.queue.configuration.SuripuQueueConfiguration;
 import com.hello.suripu.queue.modules.RolloutQueueModule;
 import com.hello.suripu.queue.timeline.TimelineGenerator;
 import com.hello.suripu.queue.timeline.TimelineQueueProcessor;
+import com.librato.rollout.RolloutAdapter;
+import com.librato.rollout.RolloutClient;
 import io.dropwizard.cli.ConfiguredCommand;
 import io.dropwizard.client.HttpClientBuilder;
 import io.dropwizard.jdbi.DBIFactory;
@@ -94,8 +99,40 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
     private Boolean isRunning = false;
     private ExecutorService executor;
 
+    private static class NoopSender implements NotificationSender {
+
+        @Override
+        public void send(PushNotificationEvent pushNotificationEvent) {
+
+        }
+
+        @Override
+        public void sendRaw(String partitionKey, byte[] protobuf) {
+
+        }
+
+        @Override
+        public List<PushNotification.UserPushNotification> sendBatch(List<PushNotification.UserPushNotification> notifications) {
+            return Lists.newArrayList();
+        }
+    }
+
+    private static class NoopFlipper implements RolloutAdapter {
+
+        @Override
+        public boolean userFeatureActive(String feature, long userId, List<String> userGroups) {
+            return false;
+        }
+
+        @Override
+        public boolean deviceFeatureActive(String feature, String deviceId, List<String> userGroups) {
+            return false;
+        }
+    }
+
     public TimelineQueueWorkerCommand() {
         super("timeline_generator", "generate timeline");
+
     }
 
     @Override
@@ -243,9 +280,10 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
 
             final List<Future<TimelineQueueProcessor.TimelineMessage>> futures = Lists.newArrayListWithCapacity(messages.size());
 
+
             if (!messages.isEmpty()) {
                 for (final TimelineQueueProcessor.TimelineMessage message : messages) {
-                    final TimelineGenerator generator = new TimelineGenerator(timelineProcessor, message);
+                    final TimelineGenerator generator = new TimelineGenerator(timelineProcessor, message, new NoopSender(), new RolloutClient(new NoopFlipper()));
                     final Future<TimelineQueueProcessor.TimelineMessage> future = executor.submit(generator);
                     futures.add(future);
                 }
