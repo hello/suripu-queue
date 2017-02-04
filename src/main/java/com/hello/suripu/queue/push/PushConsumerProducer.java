@@ -121,13 +121,13 @@ public class PushConsumerProducer implements Managed{
                     final ImmutableList<TrackerMotion> trackerMotionList = pillDataDAODynamoDB.getBetween(accountId, DateTime.now(DateTimeZone.UTC).minusMinutes(20), DateTime.now(DateTimeZone.UTC));
 
                     final boolean pillSeenRecently = true; // TODO: lookup last seen
-                    LOGGER.info("action=check-motion motion_count={} account_id={}", trackerMotionList.size(), accountId);
+                    LOGGER.info("action=check-motion motion_count={} account_id={} pill_seen_recently={}", trackerMotionList.size(), accountId, pillSeenRecently);
                     if (trackerMotionList.isEmpty() && pillSeenRecently) {
 
                         final TimelineQueueProtos.Message protoMessage = TimelineQueueProtos.Message.newBuilder()
                                 .setAccountId(accountId)
                                 .setTargetDate(triggerMessage.getTargetDate())
-                                .setTimestamp(DateTime.now().getMillis()).build();
+                                .setTimestamp(DateTime.now(DateTimeZone.UTC).getMillis()).build();
                         final SendMessageRequest req = new SendMessageRequest()
                                 .withMessageBody(Base64.encodeBase64URLSafeString(protoMessage.toByteArray()))
                                 .withQueueUrl(producerQueueUrl.get());
