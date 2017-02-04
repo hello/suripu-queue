@@ -88,11 +88,11 @@ server:
   applicationContextPath: /
   applicationConnectors:
     - type: http
-      port: 9999
+      port: 8118
       idleTimeout: 25 seconds
   adminConnectors:
     - type: http
-      port: 9998
+      port: 8008
       idleTimeout: 25 seconds
 
 # Logging settings.
