@@ -154,6 +154,7 @@ taimurain_configuration:
 dynamodb:
   region: us-east-1
   tables:
+    app_stats: prod_app_stats
     features: features
     sense_prefix : prod_sense # not used at the moment but we need it here
     calibration: prod_calibration
@@ -167,6 +168,7 @@ dynamodb:
     sleep_stats: prod_sleep_stats
     timezone_history: prod_timezone_history
   endpoints:
+    app_stats: http://dynamodb.us-east-1.amazonaws.com
     features : http://dynamodb.us-east-1.amazonaws.com
     sense_prefix: http://dynamodb.us-east-1.amazonaws.com
     sense_last_seen : http://dynamodb.us-east-1.amazonaws.com

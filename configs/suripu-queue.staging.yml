@@ -137,7 +137,6 @@ SQS_configuration:
     sqs_max_messages_read: 10
     sqs_wait_time_seconds: 10
     sqs_visibility_timeout_seconds: 5
-    timezone_history: timezone_history
 
 sleep_score_sqs_configuration:
     sqs_queue_name: dev_sleep_score_push
@@ -149,6 +148,7 @@ sleep_score_sqs_configuration:
 dynamodb:
   region: us-east-1
   tables:
+    app_stats: app_stats
     features: features
     sense_prefix : prod_sense #not used at the moment but we need it here
     calibration: calibration
@@ -161,6 +161,7 @@ dynamodb:
     sleep_score_parameters: sleep_score_parameters
     sleep_stats: sleep_stats
   endpoints:
+    app_stats: http://dynamodb.us-east-1.amazonaws.com
     features : http://dynamodb.us-east-1.amazonaws.com
     sense_prefix: http://dynamodb.us-east-1.amazonaws.com
     sense_last_seen : http://dynamodb.us-east-1.amazonaws.com
