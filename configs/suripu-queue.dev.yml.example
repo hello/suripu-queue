@@ -149,6 +149,7 @@ sleep_score_sqs_configuration:
 
 dynamodb:
   region: us-east-1
+  default_endpoint: http://localhost:7777
   tables:
     features: features
     sense_prefix : prod_sense #not used at the moment but we need it here
@@ -162,20 +163,7 @@ dynamodb:
     sleep_score_parameters: sleep_score_parameters
     sleep_stats: sleep_stats
     timezone_history: timezone_history
-  endpoints:
-    features : http://dynamodb.us-east-1.amazonaws.com
-    sense_prefix: http://localhost:7777
-    sense_last_seen : http://localhost:7777
-    calibration : http://localhost:7777
-    device_data: http://localhost:7777
-    pill_data: http://localhost:7777
-    online_hmm_models: http://localhost:7777
-    feature_extraction_models: http://localhost:7777
-    ring_time_history: http://localhost:7777
-    sleep_hmm: http://localhost:7777
-    sleep_score_parameters: http://localhost:7777
-    sleep_stats: http://localhost:7777
-    timezone_history: http://localhost:7777
+  endpoints: {}
 
 
 num_queue_producer_threads: 2
