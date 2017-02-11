@@ -153,6 +153,7 @@ taimurain_configuration:
 
 dynamodb:
   region: us-east-1
+  default_endpoint: http://dynamodb.us-east-1.amazonaws.com
   tables:
     app_stats: prod_app_stats
     features: features
@@ -167,21 +168,7 @@ dynamodb:
     sleep_score_parameters: prod_sleep_score_parameters
     sleep_stats: prod_sleep_stats
     timezone_history: prod_timezone_history
-  endpoints:
-    app_stats: http://dynamodb.us-east-1.amazonaws.com
-    features : http://dynamodb.us-east-1.amazonaws.com
-    sense_prefix: http://dynamodb.us-east-1.amazonaws.com
-    sense_last_seen : http://dynamodb.us-east-1.amazonaws.com
-    calibration : http://dynamodb.us-east-1.amazonaws.com
-    device_data: http://dynamodb.us-east-1.amazonaws.com
-    pill_data: http://dynamodb.us-east-1.amazonaws.com
-    online_hmm_models: http://dynamodb.us-east-1.amazonaws.com
-    feature_extraction_models: http://dynamodb.us-east-1.amazonaws.com
-    ring_time_history: http://dynamodb.us-east-1.amazonaws.com
-    sleep_hmm: http://dynamodb.us-east-1.amazonaws.com
-    sleep_score_parameters: http://dynamodb.us-east-1.amazonaws.com
-    sleep_stats: http://dynamodb.us-east-1.amazonaws.com
-    timezone_history: http://dynamodb.us-east-1.amazonaws.com
+  endpoints: {}
 
 SQS_configuration:
     sqs_queue_name: prod_timeline_queue

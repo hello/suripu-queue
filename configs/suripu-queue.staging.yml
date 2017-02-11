@@ -48,10 +48,10 @@ common_db:
 sensors_db:
   driverClass: org.postgresql.Driver
 
-  # use prod_sense_data on redshift
-  user: suripu_queue
-  password: Hello-suripu-queue-123
-  url: jdbc:postgresql://sensors2.cy7n0vzxfedi.us-east-1.redshift.amazonaws.com:5439/sensors1
+  # use prod_sense_data on pg for dev
+  user: ingress_user
+  password: hello ingress user
+  url: jdbc:postgresql://chanku-test.cdawj8qazvva.us-east-1.rds.amazonaws.com:5432/chanku
 
 
   # any properties specific to your JDBC driver:
@@ -147,6 +147,7 @@ sleep_score_sqs_configuration:
 
 dynamodb:
   region: us-east-1
+  default_endpoint: http://dynamodb.us-east-1.amazonaws.com
   tables:
     app_stats: app_stats
     features: features
@@ -161,21 +162,7 @@ dynamodb:
     sleep_score_parameters: sleep_score_parameters
     sleep_stats: sleep_stats
     timezone_history: timezone_history
-  endpoints:
-    app_stats: http://dynamodb.us-east-1.amazonaws.com
-    features : http://dynamodb.us-east-1.amazonaws.com
-    sense_prefix: http://dynamodb.us-east-1.amazonaws.com
-    sense_last_seen : http://dynamodb.us-east-1.amazonaws.com
-    calibration : http://dynamodb.us-east-1.amazonaws.com
-    device_data: http://dynamodb.us-east-1.amazonaws.com
-    pill_data: http://dynamodb.us-east-1.amazonaws.com
-    online_hmm_models: http://dynamodb.us-east-1.amazonaws.com
-    feature_extraction_models: http://dynamodb.us-east-1.amazonaws.com
-    ring_time_history: http://dynamodb.us-east-1.amazonaws.com
-    sleep_hmm: http://dynamodb.us-east-1.amazonaws.com
-    sleep_score_parameters: http://dynamodb.us-east-1.amazonaws.com
-    sleep_stats: http://dynamodb.us-east-1.amazonaws.com
-    timezone_history: http://dynamodb.us-east-1.amazonaws.com
+  endpoints: {}
 
 num_queue_producer_threads: 2
 num_send_message_threads: 2
