@@ -181,7 +181,7 @@ sleep_score_sqs_configuration:
     sqs_max_connections: 50
     sqs_max_messages_read: 10
     sqs_wait_time_seconds: 20
-    sqs_visibility_timeout_seconds: 120
+    sqs_visibility_timeout_seconds: 1200
 
 num_queue_producer_threads: 2
 num_send_message_threads: 10
