@@ -160,6 +160,7 @@ dynamodb:
     calibration: prod_calibration
     device_data: prod_sense_data
     pill_data: prod_pill_data
+    main_event_times: prod_main_event_times
     online_hmm_models: prod_online_hmm_models
     feature_extraction_models: prod_feature_extraction_models
     ring_time_history: prod_ring_history_by_account

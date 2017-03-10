@@ -155,6 +155,7 @@ dynamodb:
     calibration: calibration
     device_data: sense_data
     pill_data: pill_data
+    main_event_times: main_event_times
     online_hmm_models: online_hmm_models
     feature_extraction_models: feature_extraction_models
     ring_time_history: ring_history_by_account
