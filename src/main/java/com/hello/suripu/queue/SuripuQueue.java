@@ -38,6 +38,7 @@ import com.hello.suripu.core.db.FeatureExtractionModelsDAODynamoDB;
 import com.hello.suripu.core.db.FeatureStore;
 import com.hello.suripu.core.db.FeedbackReadDAO;
 import com.hello.suripu.core.db.HistoricalPairingDAO;
+import com.hello.suripu.core.db.MainEventTimesDynamoDB;
 import com.hello.suripu.core.db.OnlineHmmModelsDAO;
 import com.hello.suripu.core.db.OnlineHmmModelsDAODynamoDB;
 import com.hello.suripu.core.db.PairingDAO;
@@ -269,6 +270,11 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
         final AmazonDynamoDB timezoneHistoryDynamoDBClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.TIMEZONE_HISTORY);
         final TimeZoneHistoryDAODynamoDB timeZoneHistoryDAODynamoDB = new TimeZoneHistoryDAODynamoDB(timezoneHistoryDynamoDBClient, tableNames.get(DynamoDBTableName.TIMEZONE_HISTORY));
 
+        final AmazonDynamoDB mainEventTimesDynamoDBClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.MAIN_EVENT_TIMES);
+        final MainEventTimesDynamoDB mainEventTimesDAO = new MainEventTimesDynamoDB(
+                mainEventTimesDynamoDBClient,
+                tableNames.get(DynamoDBTableName.MAIN_EVENT_TIMES));
+
         final TimelineAlgorithmConfiguration timelineAlgorithmConfiguration = new TimelineAlgorithmConfiguration();
         final InstrumentedTimelineProcessor timelineProcessor = InstrumentedTimelineProcessor.createTimelineProcessor(
                 pillDataDAODynamoDB,
@@ -279,6 +285,7 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
                 sleepHmmDAODynamoDB,
                 accountDAO,
                 sleepStatsDAODynamoDB,
+                mainEventTimesDAO,
                 senseDataDAO,
                 timeZoneHistoryDAODynamoDB,
                 onlineHmmModelsDAO,
