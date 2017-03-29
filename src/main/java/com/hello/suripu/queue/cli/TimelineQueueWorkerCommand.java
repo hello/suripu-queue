@@ -273,7 +273,7 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
         final Meter noTimeline = metrics.meter(MetricRegistry.name(klass, "timeline-fail", "fail-to-created"));
 
         final InstrumentedTimelineProcessor timelineProcessor = createTimelineProcessor(environment, provider, configuration);
-        final InstrumentedTimelineProcessorV3 timelineProcessor = createTimelineProcessor(environment, provider, configuration);
+        final InstrumentedTimelineProcessorV3 timelineProcessorV3 = createTimelineProcessorV3(environment, provider, configuration);
 
         int numEmptyQueueIterations = 0;
 
@@ -426,6 +426,129 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
 
         final TimelineAlgorithmConfiguration timelineAlgorithmConfiguration = new TimelineAlgorithmConfiguration();
         return InstrumentedTimelineProcessor.createTimelineProcessor(
+                pillDataDAODynamoDB,
+                deviceDAO,
+                deviceDataDAODynamoDB,
+                ringTimeHistoryDAODynamoDB,
+                feedbackDAO,
+                sleepHmmDAODynamoDB,
+                accountDAO,
+                sleepStatsDAODynamoDB,
+                mainEventTimesDAO,
+                senseDataDAO,
+                timeZoneHistoryDAODynamoDB,
+                onlineHmmModelsDAO,
+                featureExtractionDAO,
+                defaultModelEnsembleDAO,
+                userTimelineTestGroupDAO,
+                sleepScoreParametersDAO,
+                neuralNetClients,
+                timelineAlgorithmConfiguration,
+                environment.metrics());
+
+    }
+
+    private InstrumentedTimelineProcessorV3 createTimelineProcessorV3(final Environment environment,
+                                                                      final AWSCredentialsProvider provider,
+                                                                      final SuripuQueueConfiguration config)throws Exception {
+
+        final DBIFactory factory = new DBIFactory();
+        final DBI commonDB = factory.build(environment, config.getCommonDB(), "commonDB");
+
+        commonDB.registerArgumentFactory(new JodaArgumentFactory());
+        commonDB.registerContainerFactory(new OptionalContainerFactory());
+        commonDB.registerArgumentFactory(new PostgresIntegerArrayArgumentFactory());
+        commonDB.registerContainerFactory(new ImmutableListContainerFactory());
+        commonDB.registerContainerFactory(new ImmutableSetContainerFactory());
+
+        final DeviceReadDAO deviceDAO = commonDB.onDemand(DeviceReadDAO.class);
+        final FeedbackReadDAO feedbackDAO = commonDB.onDemand(FeedbackReadDAO.class);
+        final AccountDAO accountDAO = commonDB.onDemand(AccountDAOImpl.class);
+        final SenseColorDAO senseColorDAO = commonDB.onDemand(SenseColorDAOSQLImpl.class);
+        final UserTimelineTestGroupDAO userTimelineTestGroupDAO = commonDB.onDemand(UserTimelineTestGroupDAOImpl.class);
+
+        final ClientConfiguration clientConfig = new ClientConfiguration()
+                .withConnectionTimeout(1000)
+                .withMaxErrorRetry(5);
+
+        final AmazonDynamoDBClientFactory dynamoDBClientFactory = AmazonDynamoDBClientFactory.create(provider,
+                clientConfig, config.dynamoDBConfiguration());
+
+        final ImmutableMap<DynamoDBTableName, String> tableNames = config.dynamoDBConfiguration().tables();
+
+        final AmazonDynamoDB pillDataDAODynamoDBClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.PILL_DATA);
+        final PillDataDAODynamoDB pillDataDAODynamoDB = new PillDataDAODynamoDB(pillDataDAODynamoDBClient,
+                tableNames.get(DynamoDBTableName.PILL_DATA));
+
+        final AmazonDynamoDB deviceDataDAODynamoDBClient =  dynamoDBClientFactory.getForTable(DynamoDBTableName.DEVICE_DATA);
+        final DeviceDataDAODynamoDB deviceDataDAODynamoDB = new DeviceDataDAODynamoDB(deviceDataDAODynamoDBClient,
+                tableNames.get(DynamoDBTableName.DEVICE_DATA));
+
+        final AmazonDynamoDB ringTimeHistoryDynamoDBClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.RING_TIME_HISTORY);
+        final RingTimeHistoryDAODynamoDB ringTimeHistoryDAODynamoDB = new RingTimeHistoryDAODynamoDB(ringTimeHistoryDynamoDBClient,
+                tableNames.get(DynamoDBTableName.RING_TIME_HISTORY));
+
+        final AmazonDynamoDB sleepHmmDynamoDbClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.SLEEP_HMM);
+        final SleepHmmDAODynamoDB sleepHmmDAODynamoDB = new SleepHmmDAODynamoDB(sleepHmmDynamoDbClient,
+                tableNames.get(DynamoDBTableName.SLEEP_HMM));
+
+        // use SQS version for testing
+        final AmazonDynamoDB dynamoDBStatsClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.SLEEP_STATS);
+        final SleepStatsDAODynamoDB sleepStatsDAODynamoDB = new SleepStatsDAODynamoDB(dynamoDBStatsClient,
+                tableNames.get(DynamoDBTableName.SLEEP_STATS),
+                config.getSleepStatsVersion());
+
+        final AmazonDynamoDB onlineHmmModelsDb = dynamoDBClientFactory.getForTable(DynamoDBTableName.ONLINE_HMM_MODELS);
+        final OnlineHmmModelsDAO onlineHmmModelsDAO = OnlineHmmModelsDAODynamoDB.create(onlineHmmModelsDb,
+                tableNames.get(DynamoDBTableName.ONLINE_HMM_MODELS));
+
+        final AmazonDynamoDB featureExtractionModelsDb = dynamoDBClientFactory.getForTable(DynamoDBTableName.FEATURE_EXTRACTION_MODELS);
+        final FeatureExtractionModelsDAO featureExtractionDAO = new FeatureExtractionModelsDAODynamoDB(featureExtractionModelsDb,
+                tableNames.get(DynamoDBTableName.FEATURE_EXTRACTION_MODELS));
+
+        final AmazonDynamoDB calibrationDynamoDBClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.CALIBRATION);
+        final CalibrationDAO calibrationDAO = CalibrationDynamoDB.create(calibrationDynamoDBClient,
+                tableNames.get(DynamoDBTableName.CALIBRATION));
+
+        final AmazonDynamoDB sleepScoreParametersClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.SLEEP_SCORE_PARAMETERS);
+        final SleepScoreParametersDAO sleepScoreParametersDAO = new SleepScoreParametersDynamoDB(sleepScoreParametersClient, tableNames.get(DynamoDBTableName.SLEEP_SCORE_PARAMETERS));
+
+        /* Default model ensemble for all users  */
+        final S3BucketConfiguration timelineModelEnsemblesConfig = config.getTimelineModelEnsemblesConfiguration();
+        final S3BucketConfiguration seedModelConfig = config.getTimelineSeedModelConfiguration();
+
+        final AmazonS3 amazonS3 = new AmazonS3Client(provider, clientConfig);
+        final DefaultModelEnsembleDAO defaultModelEnsembleDAO = DefaultModelEnsembleFromS3.create(amazonS3,
+                timelineModelEnsemblesConfig.getBucket(),
+                timelineModelEnsemblesConfig.getKey(),
+                seedModelConfig.getBucket(),
+                seedModelConfig.getKey());
+
+        /* Neural net endpoint information */
+        final Map<AlgorithmType, URL> neuralNetEndpoints = config.getTaimurainConfiguration().getEndpoints();
+        final Map<AlgorithmType, NeuralNetEndpoint> neuralNetClients = Maps.newHashMap();
+        final HttpClientBuilder clientBuilder = new HttpClientBuilder(environment).using(config.getTaimurainConfiguration().getHttpClientConfiguration());
+
+        for (final AlgorithmType algorithmType : neuralNetEndpoints.keySet()) {
+            String url = neuralNetEndpoints.get(algorithmType).toExternalForm();
+            final TaimurainHttpClient taimurainHttpClient = TaimurainHttpClient.create(
+                    clientBuilder.build("taimurain" + algorithmType), url);
+            neuralNetClients.put(algorithmType,taimurainHttpClient);
+        }
+
+        final PairingDAO pairingDAO = new HistoricalPairingDAO(deviceDAO,deviceDataDAODynamoDB);
+        final com.hello.suripu.core.db.SenseDataDAO senseDataDAO = new SenseDataDAODynamoDB(pairingDAO, deviceDataDAODynamoDB, senseColorDAO, calibrationDAO);
+
+        final AmazonDynamoDB timezoneHistoryDynamoDBClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.TIMEZONE_HISTORY);
+        final TimeZoneHistoryDAODynamoDB timeZoneHistoryDAODynamoDB = new TimeZoneHistoryDAODynamoDB(timezoneHistoryDynamoDBClient, tableNames.get(DynamoDBTableName.TIMEZONE_HISTORY));
+
+        final AmazonDynamoDB mainEventTimesDynamoDBClient = dynamoDBClientFactory.getForTable(DynamoDBTableName.MAIN_EVENT_TIMES);
+        final MainEventTimesDynamoDB mainEventTimesDAO = new MainEventTimesDynamoDB(
+                mainEventTimesDynamoDBClient,
+                tableNames.get(DynamoDBTableName.MAIN_EVENT_TIMES));
+
+        final TimelineAlgorithmConfiguration timelineAlgorithmConfiguration = new TimelineAlgorithmConfiguration();
+        return InstrumentedTimelineProcessorV3.createTimelineProcessor(
                 pillDataDAODynamoDB,
                 deviceDAO,
                 deviceDataDAODynamoDB,
