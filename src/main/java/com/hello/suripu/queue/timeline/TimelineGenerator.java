@@ -9,6 +9,7 @@ import com.hello.suripu.core.models.Timeline;
 import com.hello.suripu.core.models.TimelineResult;
 import com.hello.suripu.core.notifications.sender.NotificationSender;
 import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessor;
+import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessorV3;
 import com.librato.rollout.RolloutClient;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -27,16 +28,19 @@ public class TimelineGenerator implements Callable<TimelineQueueProcessor.Timeli
     private static final Logger LOGGER = LoggerFactory.getLogger(TimelineGenerator.class);
 
     final private InstrumentedTimelineProcessor timelineProcessor;
+    final private InstrumentedTimelineProcessorV3 timelineProcessorV3;
     final private TimelineQueueProcessor.TimelineMessage message;
     final private NotificationSender notificationSender;
     final private RolloutClient featureFlipper;
 
     public TimelineGenerator(
             final InstrumentedTimelineProcessor timelineProcessor,
+            final InstrumentedTimelineProcessorV3 timelineProcessorV3,
             final TimelineQueueProcessor.TimelineMessage message,
             final NotificationSender notificationSender,
             final RolloutClient featureFlipper) {
         this.timelineProcessor = timelineProcessor;
+        this.timelineProcessorV3 = timelineProcessorV3;
         this.message = message;
         this.notificationSender = notificationSender;
         this.featureFlipper = featureFlipper;
@@ -45,8 +49,15 @@ public class TimelineGenerator implements Callable<TimelineQueueProcessor.Timeli
     @Override
     public TimelineQueueProcessor.TimelineMessage call() throws Exception {
         try {
-            final InstrumentedTimelineProcessor newTimelineProcessor = timelineProcessor.copyMeWithNewUUID(UUID.randomUUID());
-            final TimelineResult result = newTimelineProcessor.retrieveTimelinesFast(message.accountId, message.targetDate, Optional.absent());
+            final TimelineResult result;
+            if (featureFlipper.userFeatureActive(FeatureFlipper.TIMELINE_PROCESSOR_V3_ENABLED, message.accountId, Collections.EMPTY_LIST)){
+                final InstrumentedTimelineProcessorV3 newTimelineProcessorV3 = timelineProcessorV3.copyMeWithNewUUID(UUID.randomUUID());
+                result = newTimelineProcessorV3.retrieveTimelinesFast(message.accountId, message.targetDate, Optional.absent());
+             } else {
+                 final InstrumentedTimelineProcessor newTimelineProcessor = timelineProcessor.copyMeWithNewUUID(UUID.randomUUID());
+                 result = newTimelineProcessor.retrieveTimelinesFast(message.accountId, message.targetDate, Optional.absent());
+             }
+
             if (!result.getTimelineLogV2().isEmpty()) {
                 final Timeline timeline = result.timelines.get(0);
                 if (timeline.score > 0) {

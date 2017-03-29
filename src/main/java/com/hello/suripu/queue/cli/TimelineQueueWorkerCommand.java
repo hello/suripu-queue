@@ -64,6 +64,7 @@ import com.hello.suripu.coredropwizard.configuration.S3BucketConfiguration;
 import com.hello.suripu.coredropwizard.configuration.TimelineAlgorithmConfiguration;
 import com.hello.suripu.coredropwizard.db.SleepHmmDAODynamoDB;
 import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessor;
+import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessorV3;
 import com.hello.suripu.queue.configuration.SQSConfiguration;
 import com.hello.suripu.queue.configuration.SuripuQueueConfiguration;
 import com.hello.suripu.queue.modules.RolloutQueueModule;
@@ -272,6 +273,8 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
         final Meter noTimeline = metrics.meter(MetricRegistry.name(klass, "timeline-fail", "fail-to-created"));
 
         final InstrumentedTimelineProcessor timelineProcessor = createTimelineProcessor(environment, provider, configuration);
+        final InstrumentedTimelineProcessorV3 timelineProcessor = createTimelineProcessor(environment, provider, configuration);
+
         int numEmptyQueueIterations = 0;
 
         do {
@@ -284,7 +287,7 @@ public class TimelineQueueWorkerCommand extends ConfiguredCommand<SuripuQueueCon
 
             if (!messages.isEmpty()) {
                 for (final TimelineQueueProcessor.TimelineMessage message : messages) {
-                    final TimelineGenerator generator = new TimelineGenerator(timelineProcessor, message, new NoopSender(), new RolloutClient(new NoopFlipper()));
+                    final TimelineGenerator generator = new TimelineGenerator(timelineProcessor, timelineProcessorV3, message, new NoopSender(), new RolloutClient(new NoopFlipper()));
                     final Future<TimelineQueueProcessor.TimelineMessage> future = executor.submit(generator);
                     futures.add(future);
                 }

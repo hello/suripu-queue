@@ -7,6 +7,7 @@ import com.google.common.collect.Lists;
 import com.hello.suripu.core.notifications.sender.NotificationSender;
 import com.hello.suripu.core.processors.FeatureFlippedProcessor;
 import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessor;
+import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessorV3;
 import io.dropwizard.lifecycle.Managed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,7 @@ public class TimelineQueueConsumerManager extends FeatureFlippedProcessor implem
 
     private final TimelineQueueProcessor queueProcessor;
     private final InstrumentedTimelineProcessor timelineProcessor;
+    private final InstrumentedTimelineProcessorV3 timelineProcessorV3;
 
     private final ExecutorService timelineExecutor;
     private final ExecutorService consumerExecutor;
@@ -48,12 +50,14 @@ public class TimelineQueueConsumerManager extends FeatureFlippedProcessor implem
 
     public TimelineQueueConsumerManager(final TimelineQueueProcessor queueProcessor,
                                         final InstrumentedTimelineProcessor timelineProcessor,
+                                        final InstrumentedTimelineProcessorV3 timelineProcessorV3,
                                         final ExecutorService consumerExecutor,
                                         final ExecutorService timelineExecutors,
                                         final MetricRegistry metrics,
                                         final NotificationSender notificationSender) {
         this.queueProcessor = queueProcessor;
         this.timelineProcessor = timelineProcessor;
+        this.timelineProcessorV3 = timelineProcessorV3;
         this.timelineExecutor = timelineExecutors;
         this.consumerExecutor = consumerExecutor;
         this.notificationSender = notificationSender;
@@ -130,7 +134,7 @@ public class TimelineQueueConsumerManager extends FeatureFlippedProcessor implem
 
                 // generate all the timelines
                 for (final TimelineQueueProcessor.TimelineMessage message : messages) {
-                    final TimelineGenerator generator = new TimelineGenerator(this.timelineProcessor, message, notificationSender, this.featureFlipper);
+                    final TimelineGenerator generator = new TimelineGenerator(this.timelineProcessor, this.timelineProcessorV3, message, notificationSender, this.featureFlipper);
                     final Future<TimelineQueueProcessor.TimelineMessage> future = timelineExecutor.submit(generator);
                     futures.add(future);
                 }
