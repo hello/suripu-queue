@@ -52,7 +52,7 @@ public class TimelineGenerator implements Callable<TimelineQueueProcessor.Timeli
             final TimelineResult result;
             if (featureFlipper.userFeatureActive(FeatureFlipper.TIMELINE_PROCESSOR_V3_ENABLED, message.accountId, Collections.EMPTY_LIST)){
                 final InstrumentedTimelineProcessorV3 newTimelineProcessorV3 = timelineProcessorV3.copyMeWithNewUUID(UUID.randomUUID());
-                result = newTimelineProcessorV3.retrieveTimelinesFast(message.accountId, message.targetDate, Optional.absent());
+                result = newTimelineProcessorV3.retrieveTimelinesFast(message.accountId, message.targetDate, Optional.absent(), Optional.absent());
              } else {
                  final InstrumentedTimelineProcessor newTimelineProcessor = timelineProcessor.copyMeWithNewUUID(UUID.randomUUID());
                  result = newTimelineProcessor.retrieveTimelinesFast(message.accountId, message.targetDate, Optional.absent());
