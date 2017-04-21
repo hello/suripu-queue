@@ -6,8 +6,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Lists;
 import com.hello.suripu.core.notifications.sender.NotificationSender;
 import com.hello.suripu.core.processors.FeatureFlippedProcessor;
-import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessor;
-import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessorV3;
+import com.hello.suripu.coredropwizard.timeline.TimelineProcessor;
 import io.dropwizard.lifecycle.Managed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,8 +26,7 @@ public class TimelineQueueConsumerManager extends FeatureFlippedProcessor implem
     private static final long SLEEP_WHEN_NO_MESSAGES_MILLIS = 10000L; // 10 secs
 
     private final TimelineQueueProcessor queueProcessor;
-    private final InstrumentedTimelineProcessor timelineProcessor;
-    private final InstrumentedTimelineProcessorV3 timelineProcessorV3;
+    private final TimelineProcessor timelineProcessor;
 
     private final ExecutorService timelineExecutor;
     private final ExecutorService consumerExecutor;
@@ -49,15 +47,13 @@ public class TimelineQueueConsumerManager extends FeatureFlippedProcessor implem
     private NotificationSender notificationSender;
 
     public TimelineQueueConsumerManager(final TimelineQueueProcessor queueProcessor,
-                                        final InstrumentedTimelineProcessor timelineProcessor,
-                                        final InstrumentedTimelineProcessorV3 timelineProcessorV3,
+                                        final TimelineProcessor timelineProcessor,
                                         final ExecutorService consumerExecutor,
                                         final ExecutorService timelineExecutors,
                                         final MetricRegistry metrics,
                                         final NotificationSender notificationSender) {
         this.queueProcessor = queueProcessor;
         this.timelineProcessor = timelineProcessor;
-        this.timelineProcessorV3 = timelineProcessorV3;
         this.timelineExecutor = timelineExecutors;
         this.consumerExecutor = consumerExecutor;
         this.notificationSender = notificationSender;
@@ -134,7 +130,7 @@ public class TimelineQueueConsumerManager extends FeatureFlippedProcessor implem
 
                 // generate all the timelines
                 for (final TimelineQueueProcessor.TimelineMessage message : messages) {
-                    final TimelineGenerator generator = new TimelineGenerator(this.timelineProcessor, this.timelineProcessorV3, message, notificationSender, this.featureFlipper);
+                    final TimelineGenerator generator = new TimelineGenerator(this.timelineProcessor, message, notificationSender, this.featureFlipper);
                     final Future<TimelineQueueProcessor.TimelineMessage> future = timelineExecutor.submit(generator);
                     futures.add(future);
                 }

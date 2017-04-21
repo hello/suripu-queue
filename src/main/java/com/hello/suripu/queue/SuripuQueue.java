@@ -66,6 +66,7 @@ import com.hello.suripu.coredropwizard.configuration.TimelineAlgorithmConfigurat
 import com.hello.suripu.coredropwizard.db.SleepHmmDAODynamoDB;
 import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessor;
 import com.hello.suripu.coredropwizard.timeline.InstrumentedTimelineProcessorV3;
+import com.hello.suripu.coredropwizard.timeline.TimelineProcessor;
 import com.hello.suripu.queue.cli.PopulateTimelineQueueCommand;
 import com.hello.suripu.queue.cli.TimelineQueueWorkerCommand;
 import com.hello.suripu.queue.configuration.SQSConfiguration;
@@ -277,7 +278,7 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
                 tableNames.get(DynamoDBTableName.MAIN_EVENT_TIMES));
 
         final TimelineAlgorithmConfiguration timelineAlgorithmConfiguration = new TimelineAlgorithmConfiguration();
-        final InstrumentedTimelineProcessor timelineProcessor = InstrumentedTimelineProcessor.createTimelineProcessor(
+        final InstrumentedTimelineProcessor timelineProcessorV2 = InstrumentedTimelineProcessor.createTimelineProcessor(
                 pillDataDAODynamoDB,
                 deviceDAO,
                 deviceDataDAODynamoDB,
@@ -318,8 +319,7 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
                 neuralNetClients,
                 timelineAlgorithmConfiguration,
                 environment.metrics());
-
-
+        final TimelineProcessor timelineProcessor = TimelineProcessor.createTimelineProcessors(timelineProcessorV2, timelineProcessorV3);         
         final long keepAliveTimeSeconds = 2L;
 
         // create queue consumer
@@ -346,7 +346,7 @@ public class SuripuQueue extends Application<SuripuQueueConfiguration> {
         );
 
         final TimelineQueueConsumerManager consumerManager = new TimelineQueueConsumerManager(queueProcessor,
-                timelineProcessor, timelineProcessorV3, consumerExecutor, timelineExecutor, environment.metrics(), notificationSender);
+                timelineProcessor, consumerExecutor, timelineExecutor, environment.metrics(), notificationSender);
 
         environment.lifecycle().manage(consumerManager);
 
